@@ -30,7 +30,7 @@ class Dataset(torch.utils.data.Dataset):
   def __getitem__(self, idx):
     sample = self.samples[idx] if self.in_memory else \
              self.read_file(self.filenames[idx])
-    output = self.transform(sample)    # data augmentation + build octree
+    output = self.transform(sample, idx)    # data augmentation + build octree
     output['label'] = self.labels[idx]
     return output
 

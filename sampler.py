@@ -1,10 +1,9 @@
 import torch
 from torch.utils.data import Sampler, DistributedSampler, Dataset
-from typing import Optional
 
 
-class InfSampler(Sampler[int]):
-  def __init__(self, dataset, shuffle=True):
+class InfSampler(Sampler):
+  def __init__(self, dataset: Dataset, shuffle: bool = True) -> None:
     self.dataset = dataset
     self.shuffle = shuffle
     self.reset_sampler()
@@ -31,10 +30,8 @@ class InfSampler(Sampler[int]):
 
 
 class DistributedInfSampler(DistributedSampler):
-  def __init__(self, dataset: Dataset, num_replicas: Optional[int] = None,
-               rank: Optional[int] = None, shuffle: bool = True,
-               seed: int = 0, drop_last: bool = False) -> None:
-    super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
+  def __init__(self, dataset: Dataset, shuffle: bool = True) -> None:
+    super().__init__(dataset, shuffle=shuffle)
     self.reset_sampler()
 
   def reset_sampler(self):
