@@ -19,7 +19,7 @@ class AverageTracker:
   def __init__(self):
     self.value = None
     self.num = 0.0
-    self.max_len = 70
+    self.max_len = 72
 
   def update(self, value):
     if not value:
@@ -59,8 +59,9 @@ class AverageTracker:
     if log_file:
       with open(log_file, 'a') as fid:
         fid.write(msg + '\n')
-    if len(msg) > self.max_len:
-      msg = msg[:self.max_len] + ' ...'
+
+    chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
+    msg = '>> ' + '\n   '.join(chunks)
     tqdm.write(msg)
 
 
