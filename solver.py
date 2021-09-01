@@ -83,7 +83,7 @@ class Solver:
   def get_model(self):
     raise NotImplementedError
 
-  def get_dataset(self, flags, training):
+  def get_dataset(self, flags):
     raise NotImplementedError
 
   def train_step(self, batch):
