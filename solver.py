@@ -6,6 +6,7 @@ import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
 import warnings
+from datetime import datetime
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
@@ -19,7 +20,7 @@ class AverageTracker:
   def __init__(self):
     self.value = None
     self.num = 0.0
-    self.max_len = 72
+    self.max_len = 76
 
   def update(self, value):
     if not value:
@@ -45,7 +46,7 @@ class AverageTracker:
       tensors = torch.stack(tensors_gather, dim=0)
       self.value[key] = torch.mean(tensors)
 
-  def log(self, epoch, summry_writer=None, log_file=None):
+  def log(self, epoch, summry_writer=None, log_file=None, msg_tag='->'):
     if not self.value:
       return  # empty, return
 
@@ -60,8 +61,9 @@ class AverageTracker:
       with open(log_file, 'a') as fid:
         fid.write(msg + '\n')
 
+    msg += ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
-    msg = '>> ' + '\n   '.join(chunks)
+    msg = (msg_tag + ' ') + ('\n' + len(msg_tag) * ' ' + ' ').join(chunks)
     tqdm.write(msg)
 
 
@@ -226,7 +228,7 @@ class Solver:
     if self.world_size > 1:
       test_tracker.average_all_gather()
     if self.is_master:
-      test_tracker.log(epoch, self.summry_writer, self.log_file)
+      test_tracker.log(epoch, self.summry_writer, self.log_file, msg_tag='=>')
       self.result_callback(test_tracker, epoch)
 
   def eval_epoch(self, epoch):
