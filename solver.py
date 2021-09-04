@@ -46,7 +46,7 @@ class AverageTracker:
       tensors = torch.stack(tensors_gather, dim=0)
       self.value[key] = torch.mean(tensors)
 
-  def log(self, epoch, summry_writer=None, log_file=None, msg_tag='->'):
+  def log(self, epoch, summry_writer=None, log_file=None, msg_tag='->', notes=''):
     if not self.value:
       return  # empty, return
 
@@ -61,7 +61,7 @@ class AverageTracker:
       with open(log_file, 'a') as fid:
         fid.write(msg + '\n')
 
-    msg += ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    msg += ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + notes
     chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
     msg = (msg_tag + ' ') + ('\n' + len(msg_tag) * ' ' + ' ').join(chunks)
     tqdm.write(msg)
@@ -164,7 +164,7 @@ class Solver:
           self.optimizer, poly)
     elif flags.lr_type == 'constant':
       self.scheduler = torch.optim.lr_scheduler.LambdaLR(
-        self.optimizer, lambda epoch: 1)
+          self.optimizer, lambda epoch: 1)
     else:
       raise ValueError
 
@@ -188,6 +188,7 @@ class Solver:
 
     train_tracker = AverageTracker()
     rng = range(len(self.train_loader))
+    log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       self.optimizer.zero_grad()
 
@@ -203,6 +204,10 @@ class Solver:
 
       # track the averaged tensors
       train_tracker.update(output)
+
+      # output intermediate logs
+      if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
+        train_tracker.log(epoch, msg_tag='- ', notes=', iter: %d' % it)
 
     # save logs
     if self.world_size > 1:
@@ -253,7 +258,7 @@ class Solver:
 
     # save ckpt
     model_dict = self.model.module.state_dict() \
-                 if self.world_size > 1 else self.model.state_dict()
+        if self.world_size > 1 else self.model.state_dict()
     ckpt_name = os.path.join(self.ckpt_dir, '%05d' % epoch)
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
