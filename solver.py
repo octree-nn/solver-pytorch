@@ -11,7 +11,7 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 from .sampler import InfSampler, DistributedInfSampler
-
+from .config import parse_args
 
 warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
 
@@ -270,12 +270,14 @@ class Solver:
     ckpt = self.FLAGS.SOLVER.ckpt
     if not ckpt:
       # If ckpt is empty, then get the latest checkpoint from ckpt_dir
-      if not os.path.exists(self.ckpt_dir):  return
+      if not os.path.exists(self.ckpt_dir):
+        return
       ckpts = sorted(os.listdir(self.ckpt_dir))
       ckpts = [ck for ck in ckpts if ck.endswith('solver.tar')]
       if len(ckpts) > 0:
         ckpt = os.path.join(self.ckpt_dir, ckpts[-1])
-    if not ckpt:  return  # return if ckpt is still empty
+    if not ckpt:
+      return  # return if ckpt is still empty
 
     # load trained model
     # check: map_location = {'cuda:0' : 'cuda:%d' % self.rank}
@@ -373,8 +375,12 @@ class Solver:
   def run(self):
     eval('self.%s()' % self.FLAGS.SOLVER.run)
 
-  @staticmethod
-  def main_worker(gpu, FLAGS, TheSolver):
+  @classmethod
+  def update_configs(cls):
+    pass
+
+  @classmethod
+  def worker(cls, gpu, FLAGS):
     world_size = len(FLAGS.SOLVER.gpu)
     if world_size > 1:
       # Set the GPU to use.
@@ -388,16 +394,18 @@ class Solver:
       # checkpoints. In the multi GPU setting, we assign the master role to the
       # rank 0 process.
       is_master = gpu == 0
-      solver = TheSolver(FLAGS, is_master)
+      the_solver = cls(FLAGS, is_master)
     else:
-      solver = TheSolver(FLAGS, is_master=True)
-    solver.run()
+      the_solver = cls(FLAGS, is_master=True)
+    the_solver.run()
 
-  @staticmethod
-  def main(FLAGS, TheSolver):
+  @classmethod
+  def main(cls):
+    cls.update_configs()
+    FLAGS = parse_args()
+
     num_gpus = len(FLAGS.SOLVER.gpu)
     if num_gpus > 1:
-      torch.multiprocessing.spawn(
-          Solver.main_worker, nprocs=num_gpus, args=(FLAGS, TheSolver))
+      torch.multiprocessing.spawn(cls.worker, nprocs=num_gpus, args=(FLAGS,))
     else:
-      Solver.main_worker(0, FLAGS, TheSolver)
+      cls.worker(0, FLAGS)
