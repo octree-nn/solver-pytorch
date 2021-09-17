@@ -79,7 +79,7 @@ class Solver:
     self.model = None          # torch.nn.Module
     self.optimizer = None      # torch.optim.Optimizer
     self.scheduler = None      # torch.optim.lr_scheduler._LRScheduler
-    self.summry_writer = None  # torch.utils.tensorboard.SummaryWriter
+    self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None       # str, used to save training logs
 
   def get_model(self):
@@ -177,7 +177,7 @@ class Solver:
       tqdm.write('Logdir: ' + self.logdir)
 
     if self.is_master and set_writer:
-      self.summry_writer = SummaryWriter(self.logdir, flush_secs=20)
+      self.summary_writer = SummaryWriter(self.logdir, flush_secs=20)
       if not os.path.exists(self.ckpt_dir):
         os.makedirs(self.ckpt_dir)
 
@@ -213,7 +213,7 @@ class Solver:
     if self.world_size > 1:
       train_tracker.average_all_gather()
     if self.is_master:
-      train_tracker.log(epoch, self.summry_writer)
+      train_tracker.log(epoch, self.summary_writer)
 
   def test_epoch(self, epoch):
     self.model.eval()
@@ -233,7 +233,7 @@ class Solver:
     if self.world_size > 1:
       test_tracker.average_all_gather()
     if self.is_master:
-      test_tracker.log(epoch, self.summry_writer, self.log_file, msg_tag='=>')
+      test_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
       self.result_callback(test_tracker, epoch)
 
   def eval_epoch(self, epoch):
@@ -315,7 +315,7 @@ class Solver:
       self.scheduler.step()
       if self.is_master:
         lr = self.scheduler.get_last_lr()  # lr is a list
-        self.summry_writer.add_scalar('train/lr', lr[0], epoch)
+        self.summary_writer.add_scalar('train/lr', lr[0], epoch)
 
       # testing or not
       if epoch % self.FLAGS.SOLVER.test_every_epoch != 0:
