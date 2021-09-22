@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .sampler import InfSampler, DistributedInfSampler
 from .tracker import AverageTracker
 from .config import parse_args
+from .lr_scheduler import get_lr_scheduler
 
 # warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
 
@@ -93,9 +94,11 @@ class Solver:
     self.model = model
 
   def configure_optimizer(self):
+    # The base learning rate `lr` scales with regard to the world_size
     flags = self.FLAGS.SOLVER
-    # The learning rate scales with regard to the world_size
     lr = flags.lr * self.world_size
+
+    # config the optimizer
     if flags.type.lower() == 'sgd':
       self.optimizer = torch.optim.SGD(
           self.model.parameters(), lr=lr, weight_decay=flags.weight_decay,
@@ -109,21 +112,8 @@ class Solver:
     else:
       raise ValueError
 
-    if flags.lr_type == 'step':
-      self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
-          self.optimizer, milestones=flags.step_size, gamma=0.1)
-    elif flags.lr_type == 'cos':
-      self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-          self.optimizer, flags.max_epoch, eta_min=flags.lr_min)
-    elif flags.lr_type == 'poly':
-      def poly(epoch): return (1 - epoch / flags.max_epoch) ** flags.lr_power
-      self.scheduler = torch.optim.lr_scheduler.LambdaLR(
-          self.optimizer, poly)
-    elif flags.lr_type == 'constant':
-      self.scheduler = torch.optim.lr_scheduler.LambdaLR(
-          self.optimizer, lambda epoch: 1)
-    else:
-      raise ValueError
+    # config the learning rate scheduler
+    self.scheduler = get_lr_scheduler(self.optimizer, flags)
 
   def configure_log(self, set_writer=True):
     self.logdir = self.FLAGS.SOLVER.logdir

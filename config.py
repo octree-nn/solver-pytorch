@@ -21,6 +21,7 @@ _C.SOLVER.ckpt_num          = 10         # The number of checkpoint kept
 _C.SOLVER.type              = 'sgd'      # Choose from sgd or adam
 _C.SOLVER.weight_decay      = 0.0005     # The weight decay on model weights
 _C.SOLVER.max_epoch         = 300        # Maximum training epoch
+_C.SOLVER.warmp_epoch       = 20         # Used in the cos_warmup 
 _C.SOLVER.eval_epoch        = 1          # Maximum evaluating epoch
 _C.SOLVER.eval_step         = -1         # Maximum evaluating steps
 _C.SOLVER.test_every_epoch  = 10         # Test model every n training epochs
