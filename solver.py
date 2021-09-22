@@ -142,12 +142,15 @@ class Solver:
     flags = self.FLAGS.SOLVER
     # The learning rate scales with regard to the world_size
     lr = flags.lr * self.world_size
-    if flags.type == 'sgd':
+    if flags.type.lower() == 'sgd':
       self.optimizer = torch.optim.SGD(
           self.model.parameters(), lr=lr, weight_decay=flags.weight_decay,
           momentum=0.9)
-    elif flags.type == 'adam':
+    elif flags.type.lower() == 'adam':
       self.optimizer = torch.optim.Adam(
+          self.model.parameters(), lr=lr, weight_decay=flags.weight_decay)
+    elif flags.type.lower() == 'adamw':
+      self.optimizer = torch.optim.AdamW(
           self.model.parameters(), lr=lr, weight_decay=flags.weight_decay)
     else:
       raise ValueError
