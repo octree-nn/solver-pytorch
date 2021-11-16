@@ -241,7 +241,10 @@ class Solver:
 
   def eval_epoch(self, epoch):
     self.model.eval()
-    for it in tqdm(range(len(self.test_loader)), ncols=80, leave=False):
+    eval_step = min(self.FLAGS.SOLVER.eval_step, len(self.test_loader))
+    if eval_step < 1:
+      eval_step = len(self.test_loader)
+    for it in tqdm(range(eval_step), ncols=80, leave=False):
       batch = self.test_iter.next()
       batch['iter_num'] = it
       batch['epoch'] = epoch
