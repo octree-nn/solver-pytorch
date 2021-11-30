@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import torch.nn
 import torch.optim
@@ -17,10 +18,12 @@ warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
 
 
 class AverageTracker:
+
   def __init__(self):
     self.value = None
     self.num = 0.0
     self.max_len = 76
+    self.start_time = time.time()
 
   def update(self, value):
     if not value:
@@ -57,17 +60,25 @@ class AverageTracker:
       if summry_writer:
         summry_writer.add_scalar(key, val, epoch)
 
+    # if the log_file is provided, save the log
     if log_file:
       with open(log_file, 'a') as fid:
         fid.write(msg + '\n')
 
-    msg += ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + notes
+    # append msg with time and notes
+    curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
+    notes = ', ' + notes if notes else ''
+    msg += curr_time + duration + notes
+
+    # split the msg for better display
     chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
     msg = (msg_tag + ' ') + ('\n' + len(msg_tag) * ' ' + ' ').join(chunks)
     tqdm.write(msg)
 
 
 class Solver:
+
   def __init__(self, FLAGS, is_master=True):
     self.FLAGS = FLAGS
     self.is_master = is_master
@@ -210,7 +221,7 @@ class Solver:
 
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
-        train_tracker.log(epoch, msg_tag='- ', notes=', iter: %d' % it)
+        train_tracker.log(epoch, msg_tag='- ', notes='iter: %d' % it)
 
     # save logs
     if self.world_size > 1:
