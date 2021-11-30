@@ -1,3 +1,4 @@
+# autopep8: off
 import os
 import sys
 import shutil
@@ -42,7 +43,7 @@ _C.DATA.train.name          = ''          # The name of the dataset
 
 # For octree building
 # If node_dis = True and there are normals, the octree features
-# is 4 channels, i.e., the average normals and the 1 channel displacement. 
+# is 4 channels, i.e., the average normals and the 1 channel displacement.
 # If node_dis = True and there are no normals, the feature is also 4 channels,
 # i.e., a 3 channel # displacement of average points relative to the center
 # points, and the last channel is constant.
@@ -111,7 +112,7 @@ _C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
 
 # backup the commands
 _C.SYS = CN()
-_C.SYS.cmds              = ''          # Used to backup the commands
+_C.SYS.cmds              = ''             # Used to backup the commands
 
 FLAGS = _C
 
@@ -123,9 +124,10 @@ def _update_config(FLAGS, args):
   if args.opts:
     FLAGS.merge_from_list(args.opts)
   FLAGS.SYS.cmds = ' '.join(sys.argv)
+
   # update logdir
   alias = FLAGS.SOLVER.alias.lower()
-  if 'time' in alias:
+  if 'time' in alias:  # 'time' is a special keyword
     alias = alias.replace('time', datetime.now().strftime('%m%d%H%M')) #%S
   if alias is not '':
     FLAGS.SOLVER.logdir += '_' + alias
