@@ -171,7 +171,7 @@ class Solver:
           self.optimizer, milestones=flags.step_size, gamma=0.1)
     elif flags.lr_type == 'cos':
       self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-          self.optimizer, flags.max_epoch, eta_min=0.001)
+          self.optimizer, flags.max_epoch, eta_min=0)
     elif flags.lr_type == 'poly':
       def poly(epoch): return (1 - epoch / flags.max_epoch) ** flags.lr_power
       self.scheduler = torch.optim.lr_scheduler.LambdaLR(
