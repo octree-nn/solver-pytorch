@@ -49,7 +49,8 @@ class AverageTracker:
       tensors = torch.stack(tensors_gather, dim=0)
       self.value[key] = torch.mean(tensors)
 
-  def log(self, epoch, summry_writer=None, log_file=None, msg_tag='->', notes=''):
+  def log(self, epoch, summry_writer=None, log_file=None, msg_tag='->',
+          notes='', print_time=True):
     if not self.value:
       return  # empty, return
 
@@ -66,10 +67,14 @@ class AverageTracker:
         fid.write(msg + '\n')
 
     # append msg with time and notes
-    curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-    duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
-    notes = ', ' + notes if notes else ''
-    msg += curr_time + duration + notes
+    time_str = ''
+    if print_time:
+      curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+      duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
+      time_str = curr_time + duration
+    if notes:
+      notes = ', ' + notes
+    msg += time_str + notes
 
     # split the msg for better display
     chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
@@ -221,7 +226,8 @@ class Solver:
 
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
-        train_tracker.log(epoch, msg_tag='- ', notes='iter: %d' % it)
+        notes = 'iter: %d' % it
+        train_tracker.log(epoch, msg_tag='- ', notes=notes, print_time=False)
 
     # save logs
     if self.world_size > 1:
