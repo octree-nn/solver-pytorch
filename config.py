@@ -104,6 +104,7 @@ _C.MODEL.interp             = 'linear'    # The interplation method: linear or n
 _C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
 _C.MODEL.sync_bn            = False       # Use sync_bn when training the network
 _C.MODEL.use_checkpoint     = False       # Use checkpoint to save memory
+_C.MODEL.find_unused_parameters = False   # Used in DistributedDataParallel
 
 # loss related parameters
 _C.LOSS = CN()

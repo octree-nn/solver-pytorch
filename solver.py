@@ -141,15 +141,16 @@ class Solver:
     return data_loader
 
   def config_model(self):
-    model = self.get_model(self.FLAGS.MODEL)
+    flags = self.FLAGS.MODEL
+    model = self.get_model(flags)
     model.cuda(device=self.device)
     if self.world_size > 1:
-      if self.FLAGS.MODEL.sync_bn:
+      if flags.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
       model = torch.nn.parallel.DistributedDataParallel(
           module=model, device_ids=[self.device],
           output_device=self.device, broadcast_buffers=False,
-          find_unused_parameters=True)
+          find_unused_parameters=flags.find_unused_parameters)
     if self.is_master:
       print(model)
     self.model = model
