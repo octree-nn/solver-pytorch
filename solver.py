@@ -244,8 +244,8 @@ class Solver:
       batch = self.test_iter.next()
       batch['iter_num'] = it
       batch['epoch'] = epoch
-      with torch.no_grad():
-        output = self.test_step(batch)
+      # with torch.no_grad():
+      output = self.test_step(batch)
 
       # track the averaged tensors
       test_tracker.update(output)
