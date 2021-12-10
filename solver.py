@@ -149,7 +149,7 @@ class Solver:
       model = torch.nn.parallel.DistributedDataParallel(
           module=model, device_ids=[self.device],
           output_device=self.device, broadcast_buffers=False,
-          find_unused_parameters=False)
+          find_unused_parameters=True)
     if self.is_master:
       print(model)
     self.model = model
