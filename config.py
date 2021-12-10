@@ -95,8 +95,10 @@ _C.MODEL.channel            = 3           # The input feature channel
 _C.MODEL.factor             = 1           # The factor used to widen the network
 _C.MODEL.nout               = 40          # The output feature channel
 _C.MODEL.resblock_num       = 3           # The resblock number
+_C.MODEL.resblock_type      = 'bottleneck'# Choose from 'bottleneck' and 'basic
 _C.MODEL.bottleneck         = 4           # The bottleneck factor of one resblock
 _C.MODEL.dropout            = (0.0,)      # The dropout ratio
+
 _C.MODEL.upsample           = 'nearest'   # The method used for upsampling
 _C.MODEL.interp             = 'linear'    # The interplation method: linear or nearest
 _C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
@@ -105,6 +107,7 @@ _C.MODEL.use_checkpoint     = False       # Use checkpoint to save memory
 
 # loss related parameters
 _C.LOSS = CN()
+_C.LOSS.name                = ''          # The name of the loss
 _C.LOSS.num_class           = 40          # The class number for the cross-entropy loss
 _C.LOSS.weights             = (1.0, 1.0)  # The weight factors for different losses
 _C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
