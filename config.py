@@ -28,6 +28,7 @@ _C.SOLVER.log_per_iter      = -1         # Output log every k training iteration
 
 _C.SOLVER.lr_type           = 'step'     # Learning rate type: step or cos
 _C.SOLVER.lr                = 0.1        # Initial learning rate
+_C.SOLVER.lr_min            = 0.0005     # The minimum learning rate
 _C.SOLVER.gamma             = 0.1        # Learning rate step-wise decay
 _C.SOLVER.step_size         = (120,60,)  # Learning rate step size.
 _C.SOLVER.lr_power          = 0.9        # Used in poly learning rate
@@ -133,7 +134,7 @@ def _update_config(FLAGS, args):
   alias = FLAGS.SOLVER.alias.lower()
   if 'time' in alias:  # 'time' is a special keyword
     alias = alias.replace('time', datetime.now().strftime('%m%d%H%M')) #%S
-  if alias is not '':
+  if alias != '':
     FLAGS.SOLVER.logdir += '_' + alias
   FLAGS.freeze()
 
