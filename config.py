@@ -63,7 +63,7 @@ _C.DATA.train.center        = (-1., -1., -1.)
 
 # For transformation
 _C.DATA.train.offset        = 0.016       # Used to displace the points when building octree
-_C.DATA.train.normal_axis   = ''          # Used to re-orient normal directions
+_C.DATA.train.orient_normal = ''          # Used to re-orient normal directions
 
 # For data augmentation
 _C.DATA.train.disable       = False       # Disable this dataset or not
