@@ -11,13 +11,17 @@ def read_file(filename):
 
 
 class Dataset(torch.utils.data.Dataset):
-  def __init__(self, root, filelist, transform, read_file=read_file, in_memory=True):
+
+  def __init__(self, root, filelist, transform, read_file=read_file,
+               in_memory=False, take: int = -1):
     super(Dataset, self).__init__()
     self.root = root
     self.filelist = filelist
     self.transform = transform
     self.in_memory = in_memory
     self.read_file = read_file
+    self.take = take
+
     self.filenames, self.labels = self.load_filenames()
     if self.in_memory:
       print('Load files into memory from ' + self.filelist)
@@ -29,7 +33,7 @@ class Dataset(torch.utils.data.Dataset):
 
   def __getitem__(self, idx):
     sample = self.samples[idx] if self.in_memory else \
-             self.read_file(self.filenames[idx])
+             self.read_file(self.filenames[idx])  # noqa
     output = self.transform(sample, idx)    # data augmentation + build octree
     output['label'] = self.labels[idx]
     return output
@@ -44,4 +48,9 @@ class Dataset(torch.utils.data.Dataset):
       label = tokens[1] if len(tokens) == 2 else 0
       filenames.append(os.path.join(self.root, filename))
       labels.append(int(label))
-    return filenames, labels
+
+    num = len(filenames)
+    if self.take > num or self.take < 1:
+      self.take = num
+
+    return filenames[:self.take], labels[:self.take]
