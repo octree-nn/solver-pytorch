@@ -12,6 +12,7 @@ import torch.optim
 import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
+import torch.profiler as profiler
 import random
 import numpy as np
 from tqdm import tqdm
@@ -325,6 +326,7 @@ class Solver:
     ''' Set `DATA.train.num_workers 0` when using this function'''
     self.config_model()
     self.config_dataloader()
+    logdir = self.FLAGS.SOLVER.logdir
 
     # warm up
     batch = next(iter(self.train_loader))
@@ -333,15 +335,17 @@ class Solver:
       output['train/loss'].backward()
 
     # profile
-    with torch.autograd.profiler.profile(
-            use_cuda=True, profile_memory=True,
-            with_stack=True, record_shapes=True) as prof:
-      output = self.train_step(batch)
-      output['train/loss'].backward()
+    with profiler.profile(
+            activities=[profiler.ProfilerActivity.CPU,
+                        profiler.ProfilerActivity.CUDA, ],
+            on_trace_ready=profiler.tensorboard_trace_handler(logdir),
+            record_shapes=True, profile_memory=True, with_stack=True,
+            with_modules=True) as prof:
+      for i in range(3):
+        output = self.train_step(batch)
+        output['train/loss'].backward()
+        prof.step()
 
-    json = os.path.join(self.FLAGS.SOLVER.logdir, 'trace.json')
-    print('Save the profile into: ' + json)
-    prof.export_chrome_trace(json)
     print(prof.key_averages(group_by_input_shape=True, group_by_stack_n=10)
               .table(sort_by="cuda_time_total", row_limit=10))
     print(prof.key_averages(group_by_input_shape=True, group_by_stack_n=10)
