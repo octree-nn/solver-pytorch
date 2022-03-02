@@ -391,9 +391,9 @@ class Solver:
     json = os.path.join(self.FLAGS.SOLVER.logdir, 'trace.json')
     print('Save the profile into: ' + json)
     prof.export_chrome_trace(json)
-    print(prof.key_averages(group_by_stack_n=10)
+    print(prof.key_averages(group_by_input_shape=True, group_by_stack_n=10)
               .table(sort_by="cuda_time_total", row_limit=10))
-    print(prof.key_averages(group_by_stack_n=10)
+    print(prof.key_averages(group_by_input_shape=True, group_by_stack_n=10)
               .table(sort_by="cuda_memory_usage", row_limit=10))
 
   def run(self):
