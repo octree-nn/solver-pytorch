@@ -41,32 +41,17 @@ _C.SOLVER.progress_bar      = True
 _C.DATA = CN()
 _C.DATA.train = CN()
 _C.DATA.train.name          = ''          # The name of the dataset
+_C.DATA.train.disable       = False       # Disable this dataset or not
 
 # For octree building
-# If node_dis = True and there are normals, the octree features
-# is 4 channels, i.e., the average normals and the 1 channel displacement.
-# If node_dis = True and there are no normals, the feature is also 4 channels,
-# i.e., a 3 channel # displacement of average points relative to the center
-# points, and the last channel is constant.
 _C.DATA.train.depth         = 5           # The octree depth
 _C.DATA.train.full_depth    = 2           # The full depth
-_C.DATA.train.node_dis      = False       # Save the node displacement
-_C.DATA.train.split_label   = False       # Save the split label
 _C.DATA.train.adaptive      = False       # Build the adaptive octree
-_C.DATA.train.node_feat     = False       # Calculate the node feature
-
-# For normalization
-# If radius < 0, then the method will compute a bounding sphere
-_C.DATA.train.bsphere       = 'sphere'    # The method uesd to calc the bounding sphere
-_C.DATA.train.radius        = -1.         # The radius and center of the bounding sphere
-_C.DATA.train.center        = (-1., -1., -1.)
 
 # For transformation
-_C.DATA.train.offset        = 0.016       # Used to displace the points when building octree
 _C.DATA.train.orient_normal = ''          # Used to re-orient normal directions
 
 # For data augmentation
-_C.DATA.train.disable       = False       # Disable this dataset or not
 _C.DATA.train.distort       = False       # Whether to apply data augmentation
 _C.DATA.train.scale         = 0.0         # Scale the points
 _C.DATA.train.uniform       = False       # Generate uniform scales
@@ -90,23 +75,23 @@ _C.DATA.test = _C.DATA.train.clone()
 # MODEL related parameters
 _C.MODEL = CN()
 _C.MODEL.name               = ''          # The name of the model
-_C.MODEL.depth              = 5           # The input octree depth
-_C.MODEL.full_depth         = 2           # The input octree full depth layer
-_C.MODEL.depth_out          = 5           # The output feature depth
+_C.MODEL.feature            = 'ND'        # The input features
 _C.MODEL.channel            = 3           # The input feature channel
-_C.MODEL.factor             = 1           # The factor used to widen the network
 _C.MODEL.nout               = 40          # The output feature channel
+_C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
+
+_C.MODEL.stages             = 3
 _C.MODEL.resblock_num       = 3           # The resblock number
 _C.MODEL.resblock_type      = 'bottleneck'# Choose from 'bottleneck' and 'basic
 _C.MODEL.bottleneck         = 4           # The bottleneck factor of one resblock
-_C.MODEL.dropout            = (0.0,)      # The dropout ratio
 
 _C.MODEL.upsample           = 'nearest'   # The method used for upsampling
 _C.MODEL.interp             = 'linear'    # The interplation method: linear or nearest
-_C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
+
 _C.MODEL.sync_bn            = False       # Use sync_bn when training the network
 _C.MODEL.use_checkpoint     = False       # Use checkpoint to save memory
 _C.MODEL.find_unused_parameters = False   # Used in DistributedDataParallel
+
 
 # loss related parameters
 _C.LOSS = CN()
