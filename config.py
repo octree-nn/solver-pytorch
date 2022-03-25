@@ -48,6 +48,9 @@ _C.DATA.train.depth         = 5           # The octree depth
 _C.DATA.train.full_depth    = 2           # The full depth
 _C.DATA.train.adaptive      = False       # Build the adaptive octree
 
+# For transformation
+_C.DATA.train.orient_normal = ''          # Used to re-orient normal directions
+
 # For data augmentation
 _C.DATA.train.distort       = False       # Whether to apply data augmentation
 _C.DATA.train.scale         = 0.0         # Scale the points
