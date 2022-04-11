@@ -25,7 +25,7 @@ class Dataset(torch.utils.data.Dataset):
     self.filenames, self.labels = self.load_filenames()
     if self.in_memory:
       print('Load files into memory from ' + self.filelist)
-      self.samples = [self.read_file(f)
+      self.samples = [self.read_file(os.path.join(self.root, f))
                       for f in tqdm(self.filenames, ncols=80, leave=False)]
 
   def __len__(self):
@@ -33,9 +33,10 @@ class Dataset(torch.utils.data.Dataset):
 
   def __getitem__(self, idx):
     sample = self.samples[idx] if self.in_memory else \
-             self.read_file(self.filenames[idx])  # noqa
+             self.read_file(os.path.join(self.root, self.filenames[idx]))  # noqa
     output = self.transform(sample, idx)    # data augmentation + build octree
     output['label'] = self.labels[idx]
+    output['filename'] = self.filenames[idx]
     return output
 
   def load_filenames(self):
@@ -46,7 +47,7 @@ class Dataset(torch.utils.data.Dataset):
       tokens = line.split()
       filename = tokens[0]
       label = tokens[1] if len(tokens) == 2 else 0
-      filenames.append(os.path.join(self.root, filename))
+      filenames.append(filename)
       labels.append(int(label))
 
     num = len(filenames)
