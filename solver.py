@@ -13,7 +13,7 @@ from .sampler import InfSampler, DistributedInfSampler
 from .tracker import AverageTracker
 from .config import parse_args
 
-warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
+# warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
 
 
 class Solver:
