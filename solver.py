@@ -31,6 +31,7 @@ class Solver:
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
+    self.eval_rst = dict()       # used to save evalation results
 
   def get_model(self):
     raise NotImplementedError
