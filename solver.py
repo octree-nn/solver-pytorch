@@ -160,6 +160,10 @@ class Solver:
       # track the averaged tensors
       train_tracker.update(output)
 
+      # clear cache every 50 iterations
+      if it % 50 == 0:
+        torch.cuda.empty_cache()
+
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
         notes = 'iter: %d' % it
