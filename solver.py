@@ -343,23 +343,24 @@ class Solver:
     pass
 
   @classmethod
-  def worker(cls, gpu, FLAGS):
-    world_size = len(FLAGS.SOLVER.gpu)
+  def worker(cls, rank, FLAGS):
+    # Set the GPU to use.
+    gpu = FLAGS.SOLVER.gpu
+    torch.cuda.set_device(gpu[rank])
+
+    world_size = len(gpu)
     if world_size > 1:
-      # Set the GPU to use.
-      torch.cuda.set_device(gpu)
       # Initialize the process group. Currently, the code only supports the
-      # `single node + multiple GPU` mode, so the rank is equal to gpu id.
+      # `single node + multiple GPU` mode.
       torch.distributed.init_process_group(
           backend='nccl', init_method=FLAGS.SOLVER.dist_url,
-          world_size=world_size, rank=gpu)
-      # Master process is responsible for logging, writing and loading
-      # checkpoints. In the multi GPU setting, we assign the master role to the
-      # rank 0 process.
-      is_master = gpu == 0
-      the_solver = cls(FLAGS, is_master)
-    else:
-      the_solver = cls(FLAGS, is_master=True)
+          world_size=world_size, rank=rank)
+
+    # The master process is responsible for logging, writing and loading
+    # checkpoints. In the multi-GPU setting, we assign the master role to
+    # the rank 0 process.
+    is_master = rank == 0
+    the_solver = cls(FLAGS, is_master)
     the_solver.run()
 
   @classmethod

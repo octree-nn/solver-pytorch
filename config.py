@@ -157,7 +157,7 @@ def parse_args(backup=True):
   _update_config(FLAGS, args)
   if backup:
     _backup_config(FLAGS, args)
-  _set_env_var(FLAGS)
+  # _set_env_var(FLAGS)
   return FLAGS
 
 
