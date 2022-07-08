@@ -5,7 +5,9 @@ import torch.optim
 import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
+import random
 import warnings
+import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
@@ -262,7 +264,19 @@ class Solver:
       tqdm.write('Load the checkpoint: %s' % ckpt)
       tqdm.write('The start_epoch is %d' % self.start_epoch)
 
+  def manual_seed(self):
+    rand_seed = self.FLAGS.SOLVER.rand_seed
+    if rand_seed > 0:
+      random.seed(rand_seed)
+      np.random.seed(rand_seed)
+      torch.manual_seed(rand_seed)
+      torch.cuda.manual_seed(rand_seed)
+      torch.cuda.manual_seed_all(rand_seed)
+      torch.backends.cudnn.benchmark = False
+      torch.backends.cudnn.deterministic = True
+
   def train(self):
+    self.manual_seed()
     self.config_model()
     self.config_dataloader()
     self.configure_optimizer()
@@ -295,6 +309,7 @@ class Solver:
       torch.distributed.barrier()
 
   def test(self):
+    self.manual_seed()
     self.config_model()
     self.configure_log(set_writer=False)
     self.config_dataloader(disable_train_data=True)
@@ -302,6 +317,7 @@ class Solver:
     self.test_epoch(epoch=0)
 
   def evaluate(self):
+    self.manual_seed()
     self.config_model()
     self.configure_log(set_writer=False)
     self.config_dataloader(disable_train_data=True)
