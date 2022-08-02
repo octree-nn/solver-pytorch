@@ -101,26 +101,27 @@ class Solver:
     self.model = model
 
   def configure_optimizer(self):
-    # The base learning rate `lr` scales with regard to the world_size
+    # The base learning rate `base_lr` scales with regard to the world_size
     flags = self.FLAGS.SOLVER
-    lr = flags.lr * self.world_size
+    base_lr = flags.lr * self.world_size
 
     # config the optimizer
     if flags.type.lower() == 'sgd':
       self.optimizer = torch.optim.SGD(
-          self.model.parameters(), lr=lr, weight_decay=flags.weight_decay,
+          self.model.parameters(), lr=base_lr, weight_decay=flags.weight_decay,
           momentum=0.9)
     elif flags.type.lower() == 'adam':
       self.optimizer = torch.optim.Adam(
-          self.model.parameters(), lr=lr, weight_decay=flags.weight_decay)
+          self.model.parameters(), lr=base_lr, weight_decay=flags.weight_decay)
     elif flags.type.lower() == 'adamw':
       self.optimizer = torch.optim.AdamW(
-          self.model.parameters(), lr=lr, weight_decay=flags.weight_decay)
+          self.model.parameters(), lr=base_lr, weight_decay=flags.weight_decay)
     else:
       raise ValueError
 
-    # config the learning rate scheduler
-    self.scheduler = get_lr_scheduler(self.optimizer, flags)
+  def config_lr_scheduler(self):
+    # This function must be called after :func:`configure_optimizer`
+    self.scheduler = get_lr_scheduler(self.optimizer, self.FLAGS.SOLVER)
 
   def configure_log(self, set_writer=True):
     self.logdir = self.FLAGS.SOLVER.logdir
@@ -277,6 +278,7 @@ class Solver:
     self.config_model()
     self.config_dataloader()
     self.configure_optimizer()
+    self.config_lr_scheduler()
     self.configure_log()
     self.load_checkpoint()
 
