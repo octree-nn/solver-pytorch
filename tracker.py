@@ -60,15 +60,26 @@ class AverageTracker:
       with open(log_file, 'a') as fid:
         fid.write(msg + '\n')
 
-    # append msg with time and notes
+    # memory
+    memory = ''
+    if torch.cuda.is_available():
+      size = torch.cuda.memory_reserved()
+      # size = torch.cuda.memory_allocated()
+      memory = ', memory: {:.3f}GB'.format(size / 2**30)
+
+    # time
     time_str = ''
     if print_time:
       curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
       duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
       time_str = curr_time + duration
+
+    # other notes
     if notes:
       notes = ', ' + notes
-    msg += time_str + notes
+
+    # concatenate all messages
+    msg += memory + time_str + notes
 
     # split the msg for better display
     chunks = [msg[i:i+self.max_len] for i in range(0, len(msg), self.max_len)]
