@@ -100,7 +100,7 @@ class Solver:
       print(model)
     self.model = model
 
-  def configure_optimizer(self):
+  def config_optimizer(self):
     # The base learning rate `base_lr` scales with regard to the world_size
     flags = self.FLAGS.SOLVER
     base_lr = flags.lr * self.world_size
@@ -277,7 +277,7 @@ class Solver:
     self.manual_seed()
     self.config_model()
     self.config_dataloader()
-    self.configure_optimizer()
+    self.config_optimizer()
     self.config_lr_scheduler()
     self.configure_log()
     self.load_checkpoint()
