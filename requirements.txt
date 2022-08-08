@@ -1,0 +1,6 @@
+torch
+numpy
+yacs
+tqdm
+tensorboard
+protobuf>=3.1.0,<=3.20.0
