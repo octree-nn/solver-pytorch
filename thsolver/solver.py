@@ -13,7 +13,6 @@ import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
 import random
-import warnings
 import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -22,8 +21,6 @@ from .sampler import InfSampler, DistributedInfSampler
 from .tracker import AverageTracker
 from .config import parse_args
 from .lr_scheduler import get_lr_scheduler
-
-# warnings.filterwarnings("ignore", module="torch.optim.lr_scheduler")
 
 
 class Solver:
@@ -226,7 +223,7 @@ class Solver:
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
                 'optimizer_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict()},
+                'scheduler_dict': self.scheduler.state_dict(), },
                ckpt_name + '.solver.tar')
 
   def load_checkpoint(self):

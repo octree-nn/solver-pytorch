@@ -45,7 +45,7 @@ class AverageTracker:
       self.value[key] = torch.mean(tensors)
 
   def log(self, epoch, summary_writer=None, log_file=None, msg_tag='->',
-          notes='', print_time=True):
+          notes='', print_time=True, print_memory=False):
     if not self.value: return  # empty, return
 
     avg = self.average()
@@ -62,7 +62,7 @@ class AverageTracker:
 
     # memory
     memory = ''
-    if torch.cuda.is_available():
+    if print_memory and torch.cuda.is_available():
       size = torch.cuda.memory_reserved()
       # size = torch.cuda.memory_allocated()
       memory = ', memory: {:.3f}GB'.format(size / 2**30)
