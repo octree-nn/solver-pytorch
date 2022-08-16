@@ -20,6 +20,7 @@ _C.SOLVER = CN()
 _C.SOLVER.alias             = ''         # The experiment alias
 _C.SOLVER.gpu               = (0,)       # The gpu ids
 _C.SOLVER.run               = 'train'    # Choose from train or test
+_C.SOLVER.amp               = False      # Use the automatic mixed precision
 
 _C.SOLVER.logdir            = 'logs'     # Directory where to write event logs
 _C.SOLVER.ckpt              = ''         # Restore weights from checkpoint file

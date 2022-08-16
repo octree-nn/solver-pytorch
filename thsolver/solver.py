@@ -35,10 +35,11 @@ class Solver:
 
     self.model = None           # torch.nn.Module
     self.optimizer = None       # torch.optim.Optimizer
+    self.scaler = None          # torch.cuda.amp.GradScaler
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
-    self.eval_rst = dict()       # used to save evalation results
+    self.eval_rst = dict()      # used to save evalation results
 
   def get_model(self):
     raise NotImplementedError
@@ -142,17 +143,20 @@ class Solver:
     rng = range(len(self.train_loader))
     log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
-      self.optimizer.zero_grad()
+      self.optimizer.zero_grad(set_to_none=True)
 
       # forward
       batch = self.train_iter.next()
       batch['iter_num'] = it
       batch['epoch'] = epoch
-      output = self.train_step(batch)
+      with torch.cuda.amp.autocast(enabled=self.FLAGS.SOLVER.amp):
+        output = self.train_step(batch)
+        loss = output['train/loss']
 
       # backward
-      output['train/loss'].backward()
-      self.optimizer.step()
+      self.scaler.scale(loss).backward()
+      self.scaler.step(self.optimizer)
+      self.scaler.update()
 
       # track the averaged tensors
       train_tracker.update(output)
@@ -182,7 +186,8 @@ class Solver:
       batch['iter_num'] = it
       batch['epoch'] = epoch
       # with torch.no_grad():
-      output = self.test_step(batch)
+      with torch.cuda.amp.autocast(enabled=self.FLAGS.SOLVER.amp):
+        output = self.test_step(batch)
 
       # track the averaged tensors
       test_tracker.update(output)
@@ -278,6 +283,7 @@ class Solver:
     self.config_lr_scheduler()
     self.configure_log()
     self.load_checkpoint()
+    self.scaler = torch.cuda.amp.GradScaler(enabled=self.FLAGS.SOLVER.amp)
 
     rng = range(self.start_epoch, self.FLAGS.SOLVER.max_epoch+1)
     for epoch in tqdm(rng, ncols=80, disable=self.disable_tqdm):
