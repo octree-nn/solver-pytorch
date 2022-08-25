@@ -6,11 +6,12 @@
 # --------------------------------------------------------
 
 import math
+from bisect import bisect_right
 import torch.optim.lr_scheduler as LR
 
 
 def multi_step(optimizer, flags):
-  return LR.MultiStepLR(optimizer, milestones=flags.step_size, gamma=0.1)
+  return LR.MultiStepLR(optimizer, flags.milestones, flags.gamma)
 
 
 def cos(optimizer, flags):
@@ -50,9 +51,20 @@ def poly_warmup(optimizer, flags):
   return LR.LambdaLR(optimizer, lr_lambda)
 
 
+def step_warmup(optimizer, flags):
+  def lr_lambda(epoch):
+    warmup = flags.warmp_epoch
+    if epoch <= warmup:
+      return epoch / warmup
+    else:
+      milestones = sorted(flags.milestones)
+      return flags.gamma ** bisect_right(milestones, epoch)
+  return LR.LambdaLR(optimizer, lr_lambda)
+
+
 def get_lr_scheduler(optimizer, flags):
   lr_dict = {'cos': cos, 'step': multi_step, 'cos': cos, 'poly': poly,
              'constant': constant, 'cos_warmup': cos_warmup,
-             'poly_warmup': poly_warmup}
+             'poly_warmup': poly_warmup, 'step_warmup': step_warmup}
   lr_func = lr_dict[flags.lr_type]
   return lr_func(optimizer, flags)
