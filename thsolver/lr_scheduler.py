@@ -30,9 +30,10 @@ def constant(optimizer, flags):
 
 def cos_warmup(optimizer, flags):
   def lr_lambda(epoch):
-    warmup = flags.warmp_epoch
+    warmup = flags.warmup_epoch
+    warmup_init = flags.warmup_init
     if epoch <= warmup:
-      return epoch / warmup
+      return (1 - warmup_init) * epoch / warmup + warmup_init
     else:
       lr_min = flags.lr_min
       ratio = (epoch - warmup) / (flags.max_epoch - warmup)
@@ -42,9 +43,10 @@ def cos_warmup(optimizer, flags):
 
 def poly_warmup(optimizer, flags):
   def lr_lambda(epoch):
-    warmup = flags.warmp_epoch
+    warmup = flags.warmup_epoch
+    warmup_init = flags.warmup_init
     if epoch <= warmup:
-      return epoch / warmup
+      return (1 - warmup_init) * epoch / warmup + warmup_init
     else:
       ratio = (epoch - warmup) / (flags.max_epoch - warmup)
       return (1 - ratio) ** flags.lr_power
@@ -53,9 +55,10 @@ def poly_warmup(optimizer, flags):
 
 def step_warmup(optimizer, flags):
   def lr_lambda(epoch):
-    warmup = flags.warmp_epoch
+    warmup = flags.warmup_epoch
+    warmup_init = flags.warmup_init
     if epoch <= warmup:
-      return epoch / warmup
+      return (1 - warmup_init) * epoch / warmup + warmup_init
     else:
       milestones = sorted(flags.milestones)
       return flags.gamma ** bisect_right(milestones, epoch)
