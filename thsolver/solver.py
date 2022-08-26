@@ -16,6 +16,7 @@ import random
 import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from torch.cuda.amp import GradScaler, autocast
 
 from .sampler import InfSampler, DistributedInfSampler
 from .tracker import AverageTracker
@@ -35,11 +36,11 @@ class Solver:
 
     self.model = None           # torch.nn.Module
     self.optimizer = None       # torch.optim.Optimizer
-    self.scaler = None          # torch.cuda.amp.GradScaler
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
     self.eval_rst = dict()      # used to save evalation results
+    self.scaler = GradScaler(enabled=FLAGS.SOLVER.amp)
 
   def get_model(self):
     raise NotImplementedError
@@ -149,14 +150,12 @@ class Solver:
       batch = self.train_iter.next()
       batch['iter_num'] = it
       batch['epoch'] = epoch
-      with torch.cuda.amp.autocast(enabled=self.FLAGS.SOLVER.amp):
+      with autocast(enabled=self.FLAGS.SOLVER.amp):
         output = self.train_step(batch)
         loss = output['train/loss']
 
-      # backward
-      self.scaler.scale(loss).backward()
-      self.scaler.step(self.optimizer)
-      self.scaler.update()
+      # backward and apply gradients
+      self.backward(loss)
 
       # track the averaged tensors
       train_tracker.update(output)
@@ -175,6 +174,11 @@ class Solver:
       train_tracker.average_all_gather()
     if self.is_master:
       train_tracker.log(epoch, self.summary_writer)
+
+  def backward(self, loss):
+    self.scaler.scale(loss).backward()
+    self.scaler.step(self.optimizer)
+    self.scaler.update()
 
   def test_epoch(self, epoch):
     self.model.eval()
@@ -228,6 +232,7 @@ class Solver:
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
                 'optimizer_dict': self.optimizer.state_dict(),
+                "scaler_dict": self.scaler.state_dict(),
                 'scheduler_dict': self.scheduler.state_dict(), },
                ckpt_name + '.solver.tar')
 
@@ -250,6 +255,7 @@ class Solver:
     if ckpt.endswith('.solver.tar'):
       model_dict = trained_dict['model_dict']
       self.start_epoch = trained_dict['epoch'] + 1  # !!! add 1
+      self.scaler.load_state_dict(checkpoint["scaler"])
       if self.optimizer:
         self.optimizer.load_state_dict(trained_dict['optimizer_dict'])
       if self.scheduler:
@@ -283,7 +289,6 @@ class Solver:
     self.config_lr_scheduler()
     self.configure_log()
     self.load_checkpoint()
-    self.scaler = torch.cuda.amp.GradScaler(enabled=self.FLAGS.SOLVER.amp)
 
     rng = range(self.start_epoch, self.FLAGS.SOLVER.max_epoch+1)
     for epoch in tqdm(rng, ncols=80, disable=self.disable_tqdm):
