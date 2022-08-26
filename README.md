@@ -1,6 +1,10 @@
 # The Solver for PyTorch
 
-The code can be used for training/testing PyTorch models, which is used in the 
-[O-CNN](https://github.com/octree-nn/ocnn-pytorch).
-And the code is released under the MIT license.
+[![downloads](https://pepy.tech/badge/thsolver)](https://pepy.tech/project/thsolver)
+[![PyPI](https://img.shields.io/pypi/v/thsolver)](https://pypi.org/project/thsolver/)
 
+
+The code can be used for training/testing PyTorch models. It is used in the
+[O-CNN](https://github.com/octree-nn/ocnn-pytorch) and my daily experiments.
+
+It is similar to `pytorch-lightning`, with much simpler implementations.
