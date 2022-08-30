@@ -12,7 +12,6 @@ import torch.optim
 import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
-import torch.profiler as profiler
 import random
 import numpy as np
 from tqdm import tqdm
@@ -323,10 +322,18 @@ class Solver:
       self.eval_epoch(epoch)
 
   def profile(self):
-    ''' Set `DATA.train.num_workers 0` when using this function'''
+    r''' Set `DATA.train.num_workers 0` when using this function. '''
+
     self.config_model()
     self.config_dataloader()
     logdir = self.FLAGS.SOLVER.logdir
+
+    # check
+    version = torch.__version__.split('.')
+    larger_than_110 = int(version[0]) > 0 and int(version[1]) > 10
+    if not larger_than_110:
+      print('The profile function is only available for Pytorch>=1.10.0.')
+      return
 
     # warm up
     batch = next(iter(self.train_loader))
@@ -335,10 +342,10 @@ class Solver:
       output['train/loss'].backward()
 
     # profile
-    with profiler.profile(
-            activities=[profiler.ProfilerActivity.CPU,
-                        profiler.ProfilerActivity.CUDA, ],
-            on_trace_ready=profiler.tensorboard_trace_handler(logdir),
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU,
+                        torch.profiler.ProfilerActivity.CUDA, ],
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(logdir),
             record_shapes=True, profile_memory=True, with_stack=True,
             with_modules=True) as prof:
       for i in range(3):
