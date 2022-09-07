@@ -158,7 +158,7 @@ class Solver:
       train_tracker.update(output)
 
       # clear cache every 50 iterations
-      if it % 50 == 0:
+      if it % 50 == 0 and self.FLAGS.SOLVER.empty_cache:
         torch.cuda.empty_cache()
 
       # output intermediate logs

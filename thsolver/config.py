@@ -45,6 +45,7 @@ _C.SOLVER.lr_power          = 0.9        # Used in poly learning rate
 _C.SOLVER.dist_url          = 'tcp://localhost:10001'
 _C.SOLVER.progress_bar      = True       # Enable the progress_bar or not
 _C.SOLVER.rand_seed         = -1         # Fix the random seed if larger than 0
+_C.SOLVER.empty_cache       = True       # Empty cuda cache periodically
 
 # DATA related parameters
 _C.DATA = CN()
