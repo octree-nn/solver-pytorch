@@ -27,6 +27,7 @@ _C.SOLVER.ckpt_num          = 10         # The number of checkpoint kept
 
 _C.SOLVER.type              = 'sgd'      # Choose from sgd or adam
 _C.SOLVER.weight_decay      = 0.0005     # The weight decay on model weights
+_C.SOLVER.clip_grad         = -1.0       # Clip gradient norm (-1: disable)
 _C.SOLVER.max_epoch         = 300        # Maximum training epoch
 _C.SOLVER.warmup_epoch      = 20         # The warmup epoch number
 _C.SOLVER.warmup_init       = 0.001      # The initial ratio of the warmup
