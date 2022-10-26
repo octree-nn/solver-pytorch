@@ -75,13 +75,13 @@ _C.DATA.train.location      = ''          # The data location
 _C.DATA.train.filelist      = ''          # The data filelist
 _C.DATA.train.batch_size    = 32          # Training data batch size
 _C.DATA.train.take          = -1          # Number of samples used for training
-_C.DATA.train.num_workers   = 8           # Number of workers to load the data
+_C.DATA.train.num_workers   = 4           # Number of workers to load the data
 _C.DATA.train.shuffle       = False       # Shuffle the input data
 _C.DATA.train.in_memory     = False       # Load the training data into memory
 
 
 _C.DATA.test = _C.DATA.train.clone()
-
+_C.DATA.test.num_workers    = 2
 
 # MODEL related parameters
 _C.MODEL = CN()
