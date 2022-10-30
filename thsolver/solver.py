@@ -150,13 +150,15 @@ class Solver:
       batch['epoch'] = epoch
       output = self.train_step(batch)
 
+      # backward
+      output['train/loss'].backward()
+
       # grad clip
       clip_grad = self.FLAGS.SOLVER.clip_grad
       if clip_grad > 0:
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
 
-      # backward
-      output['train/loss'].backward()
+      # apply the gradient
       self.optimizer.step()
 
       # track the averaged tensors
