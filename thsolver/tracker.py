@@ -10,6 +10,7 @@ import torch
 import torch.distributed
 from datetime import datetime
 from tqdm import tqdm
+from typing import Dict
 
 
 class AverageTracker:
@@ -20,7 +21,7 @@ class AverageTracker:
     self.max_len = 76
     self.start_time = time.time()
 
-  def update(self, value):
+  def update(self, value: Dict[str, torch.Tensor]):
     if not value:
       return    # empty input, return
 
@@ -33,11 +34,12 @@ class AverageTracker:
     self.num += 1
 
   def average(self):
-    return {key: val.item()/self.num for key, val in self.value.items()}
+    return {key: val.item() / self.num for key, val in self.value.items()}
 
   @torch.no_grad()
   def average_all_gather(self):
     for key, tensor in self.value.items():
+      if not tensor.is_cuda: continue
       tensors_gather = [torch.ones_like(tensor)
                         for _ in range(torch.distributed.get_world_size())]
       torch.distributed.all_gather(tensors_gather, tensor, async_op=False)

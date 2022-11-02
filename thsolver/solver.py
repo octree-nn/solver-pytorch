@@ -12,6 +12,7 @@ import torch.optim
 import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
+import time
 import random
 import numpy as np
 from tqdm import tqdm
@@ -138,19 +139,21 @@ class Solver:
     if self.world_size > 1:
       self.train_loader.sampler.set_epoch(epoch)
 
+    tick = time.time()
+    elapsed_time = dict()
     train_tracker = AverageTracker()
     rng = range(len(self.train_loader))
     log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
-      self.optimizer.zero_grad()
-
-      # forward
+      # load data
       batch = self.train_iter.next()
       batch['iter_num'] = it
       batch['epoch'] = epoch
-      output = self.train_step(batch)
+      elapsed_time['time/data'] = torch.Tensor([time.time() - tick])
 
-      # backward
+      # forward and backward
+      self.optimizer.zero_grad()
+      output = self.train_step(batch)
       output['train/loss'].backward()
 
       # grad clip
@@ -162,6 +165,9 @@ class Solver:
       self.optimizer.step()
 
       # track the averaged tensors
+      elapsed_time['time/batch'] = torch.Tensor([time.time() - tick])
+      tick = time.time()
+      output.update(elapsed_time)
       train_tracker.update(output)
 
       # clear cache every 50 iterations
