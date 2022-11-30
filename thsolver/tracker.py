@@ -53,7 +53,8 @@ class AverageTracker:
     avg = self.average()
     msg = 'Epoch: %d' % epoch
     for key, val in avg.items():
-      msg += ', %s: %.3f' % (key, val)
+      if print_time or 'time' not in key:
+        msg += ', %s: %.3f' % (key, val)
       if summary_writer is not None:
         summary_writer.add_scalar(key, val, epoch)
 
