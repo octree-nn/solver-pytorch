@@ -69,6 +69,8 @@ _C.DATA.train.uniform       = False       # Generate uniform scales
 _C.DATA.train.jitter        = 0.0         # Jitter the points
 _C.DATA.train.interval      = (1, 1, 1)   # Use interval&angle to generate random angle
 _C.DATA.train.angle         = (180, 180, 180)
+_C.DATA.train.flip          = (0.0, 0.0, 0.0)
+
 
 # For data loading
 _C.DATA.train.location      = ''          # The data location
