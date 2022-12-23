@@ -110,7 +110,6 @@ _C.MODEL.find_unused_parameters = False   # Used in DistributedDataParallel
 _C.LOSS = CN()
 _C.LOSS.name                = ''          # The name of the loss
 _C.LOSS.num_class           = 40          # The class number for the cross-entropy loss
-_C.LOSS.weights             = (1.0, 1.0)  # The weight factors for different losses
 _C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
 
 
