@@ -80,7 +80,7 @@ class Solver:
 
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=flags.batch_size, num_workers=flags.num_workers,
-        sampler=sampler, collate_fn=collate_fn, pin_memory=True)
+        sampler=sampler, collate_fn=collate_fn, pin_memory=flags.pin_memory)
     return data_loader
 
   def config_model(self):

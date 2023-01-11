@@ -53,6 +53,7 @@ _C.DATA = CN()
 _C.DATA.train = CN()
 _C.DATA.train.name          = ''          # The name of the dataset
 _C.DATA.train.disable       = False       # Disable this dataset or not
+_C.DATA.train.pin_memory    = True
 
 # For octree building
 _C.DATA.train.depth         = 5           # The octree depth
