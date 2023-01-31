@@ -13,10 +13,12 @@ import argparse
 from datetime import datetime
 from yacs.config import CfgNode as CN
 
-_C = CN()
+_C = CN(new_allowed=True)
+
+_C.BASE = ['']
 
 # SOLVER related parameters
-_C.SOLVER = CN()
+_C.SOLVER = CN(new_allowed=True)
 _C.SOLVER.alias             = ''         # The experiment alias
 _C.SOLVER.gpu               = (0,)       # The gpu ids
 _C.SOLVER.run               = 'train'    # Choose from train or test
@@ -49,8 +51,8 @@ _C.SOLVER.rand_seed         = -1         # Fix the random seed if larger than 0
 _C.SOLVER.empty_cache       = True       # Empty cuda cache periodically
 
 # DATA related parameters
-_C.DATA = CN()
-_C.DATA.train = CN()
+_C.DATA = CN(new_allowed=True)
+_C.DATA.train = CN(new_allowed=True)
 _C.DATA.train.name          = ''          # The name of the dataset
 _C.DATA.train.disable       = False       # Disable this dataset or not
 _C.DATA.train.pin_memory    = True
@@ -87,20 +89,20 @@ _C.DATA.test = _C.DATA.train.clone()
 _C.DATA.test.num_workers    = 2
 
 # MODEL related parameters
-_C.MODEL = CN()
+_C.MODEL = CN(new_allowed=True)
 _C.MODEL.name               = ''          # The name of the model
 _C.MODEL.feature            = 'ND'        # The input features
 _C.MODEL.channel            = 3           # The input feature channel
 _C.MODEL.nout               = 40          # The output feature channel
 _C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
 
-_C.MODEL.stages             = 3
-_C.MODEL.resblock_num       = 3           # The resblock number
-_C.MODEL.resblock_type      = 'bottleneck'# Choose from 'bottleneck' and 'basic
-_C.MODEL.bottleneck         = 4           # The bottleneck factor of one resblock
+# _C.MODEL.stages             = 3
+# _C.MODEL.resblock_num       = 3           # The resblock number
+# _C.MODEL.resblock_type      = 'bottleneck'# Choose from 'bottleneck' and 'basic
+# _C.MODEL.bottleneck         = 4           # The bottleneck factor of one resblock
 
-_C.MODEL.upsample           = 'nearest'   # The method used for upsampling
-_C.MODEL.interp             = 'linear'    # The interplation method: linear or nearest
+# _C.MODEL.upsample           = 'nearest'   # The method used for upsampling
+# _C.MODEL.interp             = 'linear'    # The interplation method: linear or nearest
 
 _C.MODEL.sync_bn            = False       # Use sync_bn when training the network
 _C.MODEL.use_checkpoint     = False       # Use checkpoint to save memory
@@ -108,23 +110,41 @@ _C.MODEL.find_unused_parameters = False   # Used in DistributedDataParallel
 
 
 # loss related parameters
-_C.LOSS = CN()
+_C.LOSS = CN(new_allowed=True)
 _C.LOSS.name                = ''          # The name of the loss
 _C.LOSS.num_class           = 40          # The class number for the cross-entropy loss
 _C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
 
 
 # backup the commands
-_C.SYS = CN()
+_C.SYS = CN(new_allowed=True)
 _C.SYS.cmds              = ''             # Used to backup the commands
 
 FLAGS = _C
 
 
+def _load_from_file(filename):
+  cfgs = []
+  bases = [filename]
+  while len(bases) > 0:
+    base = bases.pop(0)
+    if base:
+      with open(base, 'r') as fid:
+        cfg = CN.load_cfg(fid)
+      cfgs.append(cfg)
+      if 'BASE' in cfg:
+        bases += cfg.BASE
+  cfgs.reverse()
+  return cfgs
+
+
 def _update_config(FLAGS, args):
   FLAGS.defrost()
   if args.config:
-    FLAGS.merge_from_file(args.config)
+    # FLAGS.merge_from_file(args.config)
+    cfgs = _load_from_file(args.config)
+    for cfg in cfgs:
+      FLAGS.merge_from_other_cfg(cfg)
   if args.opts:
     FLAGS.merge_from_list(args.opts)
   FLAGS.SYS.cmds = ' '.join(sys.argv)
