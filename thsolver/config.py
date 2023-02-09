@@ -160,11 +160,12 @@ def _update_config(FLAGS, args):
 
 def _backup_config(FLAGS, args):
   logdir = FLAGS.SOLVER.logdir
-  if not os.path.exists(logdir):
-    os.makedirs(logdir)
+  os.makedirs(logdir, exist_ok=True)
+
   # copy the file to logdir
   if args.config:
     shutil.copy2(args.config, logdir)
+
   # dump all configs
   filename = os.path.join(logdir, 'all_configs.yaml')
   with open(filename, 'w') as fid:

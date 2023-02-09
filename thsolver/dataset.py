@@ -52,7 +52,7 @@ class Dataset(torch.utils.data.Dataset):
       lines = fid.readlines()
     for line in lines:
       tokens = line.split()
-      filename = tokens[0]
+      filename = tokens[0].replace('\\', '/')
       label = tokens[1] if len(tokens) == 2 else 0
       filenames.append(filename)
       labels.append(int(label))
