@@ -37,6 +37,7 @@ _C.SOLVER.eval_epoch        = 1          # Maximum evaluating epoch
 _C.SOLVER.eval_step         = -1         # Maximum evaluating steps
 _C.SOLVER.test_every_epoch  = 10         # Test model every n training epochs
 _C.SOLVER.log_per_iter      = -1         # Output log every k training iteration
+_C.SOLVER.best_val          = 'min:loss' # The best validation metric
 
 _C.SOLVER.lr_type           = 'step'     # Learning rate type: step or cos
 _C.SOLVER.lr                = 0.1        # Initial learning rate

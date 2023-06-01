@@ -16,30 +16,35 @@ from typing import Dict
 class AverageTracker:
 
   def __init__(self):
-    self.value = None
-    self.num = 0.0
+    self.value = dict()
+    self.num = dict()
     self.max_len = 76
     self.start_time = time.time()
 
   def update(self, value: Dict[str, torch.Tensor]):
+    r'''Update the tracker with the given value, which is called at the end of
+    each iteration.
+    '''
+
     if not value:
       return    # empty input, return
 
-    value = {key: val.detach() for key, val in value.items()}
-    if self.value is None:
-      self.value = value
-    else:
-      for key, val in value.items():
-        self.value[key] += val
-    self.num += 1
+    for key, val in value.items():
+      self.value[key] = self.value.get(key, 0) + val.detach()
+      self.num[key] = self.num.get(key, 0) + 1
 
   def average(self):
-    return {key: val.item() / self.num for key, val in self.value.items()}
+    return {key: val.item() / self.num[key] for key, val in self.value.items()}
 
   @torch.no_grad()
   def average_all_gather(self):
+    r'''Average the tensors on all GPUs using all_gather, which is called at the
+    end of each epoch.
+    '''
+
     for key, tensor in self.value.items():
-      if not tensor.is_cuda: continue
+      if not (isinstance(tensor, torch.Tensor) and tensor.is_cuda):
+        continue  # only gather tensors on GPU
       tensors_gather = [torch.ones_like(tensor)
                         for _ in range(torch.distributed.get_world_size())]
       torch.distributed.all_gather(tensors_gather, tensor, async_op=False)

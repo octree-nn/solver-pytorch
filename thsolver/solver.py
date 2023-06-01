@@ -39,7 +39,8 @@ class Solver:
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
-    self.eval_rst = dict()       # used to save evalation results
+    self.eval_rst = dict()      # used to save evalation results
+    self.best_val = None        # used to save the best validation result
 
   def get_model(self):
     raise NotImplementedError
@@ -131,8 +132,7 @@ class Solver:
 
     if self.is_master and set_writer:
       self.summary_writer = SummaryWriter(self.logdir, flush_secs=20)
-      if not os.path.exists(self.ckpt_dir):
-        os.makedirs(self.ckpt_dir)
+      os.makedirs(self.ckpt_dir, exist_ok=True)
 
   def train_epoch(self, epoch):
     self.model.train()
@@ -203,8 +203,9 @@ class Solver:
     if self.world_size > 1:
       test_tracker.average_all_gather()
     if self.is_master:
-      test_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
       self.result_callback(test_tracker, epoch)
+      self.save_best_checkpoint(test_tracker, epoch)
+      test_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
 
   def eval_epoch(self, epoch):
     self.model.eval()
@@ -218,9 +219,22 @@ class Solver:
       with torch.no_grad():
         self.eval_step(batch)
 
+  def save_best_checkpoint(self, tracker: AverageTracker, epoch: int):
+    best_val = self.FLAGS.SOLVER.best_val
+    if not best_val: return  # return if best_val is empty
+
+    compare, key = best_val.split(':')
+    operator = lambda x, y: x > y if compare == 'max' else x < y
+    if key in tracker.value:
+      if self.best_val is None or operator(tracker[key], self.best_val):
+        self.best_val = tracker[key]
+        model_dict = (self.model.module.state_dict() if self.world_size > 1
+                      else self.model.state_dict())
+        torch.save(model_dict, self.logdir + '/best_%05d.pth' % epoch)
+        tqdm.write('Best model at epoch %d' % epoch)
+
   def save_checkpoint(self, epoch):
-    if not self.is_master:
-      return
+    if not self.is_master: return
 
     # clean up
     ckpts = sorted(os.listdir(self.ckpt_dir))
@@ -230,8 +244,8 @@ class Solver:
         os.remove(os.path.join(self.ckpt_dir, ckpt))
 
     # save ckpt
-    model_dict = self.model.module.state_dict() \
-        if self.world_size > 1 else self.model.state_dict()
+    model_dict = (self.model.module.state_dict() if self.world_size > 1
+                  else self.model.state_dict())
     ckpt_name = os.path.join(self.ckpt_dir, '%05d' % epoch)
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
