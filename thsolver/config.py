@@ -94,8 +94,8 @@ _C.MODEL = CN(new_allowed=True)
 _C.MODEL.name               = ''          # The name of the model
 _C.MODEL.feature            = 'ND'        # The input features
 _C.MODEL.channel            = 3           # The input feature channel
-_C.MODEL.nout               = 40          # The output feature channel
 _C.MODEL.nempty             = False       # Perform Octree Conv on non-empty octree nodes
+# _C.MODEL.nout               = 40          # The output feature channel
 
 # _C.MODEL.stages             = 3
 # _C.MODEL.resblock_num       = 3           # The resblock number

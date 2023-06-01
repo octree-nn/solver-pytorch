@@ -224,14 +224,21 @@ class Solver:
     if not best_val: return  # return if best_val is empty
 
     compare, key = best_val.split(':')
+    key = 'test/' + key
+    assert compare in ['max', 'min']
     operator = lambda x, y: x > y if compare == 'max' else x < y
+
     if key in tracker.value:
-      if self.best_val is None or operator(tracker[key], self.best_val):
-        self.best_val = tracker[key]
+      curr_val = (tracker.value[key] / tracker.num[key]).item()
+      if self.best_val is None or operator(curr_val, self.best_val):
+        self.best_val = curr_val
         model_dict = (self.model.module.state_dict() if self.world_size > 1
                       else self.model.state_dict())
-        torch.save(model_dict, self.logdir + '/best_%05d.pth' % epoch)
-        tqdm.write('Best model at epoch %d' % epoch)
+        torch.save(model_dict, os.path.join(self.logdir, 'best_model.pth'))
+        msg = 'epoch: %d, %s: %f' % (epoch, key, curr_val)
+        with open(os.path.join(self.logdir, 'best_model.txt'), 'a') as fid:
+          fid.write(msg + '\n')
+        tqdm.write('=> Best model at ' + msg)
 
   def save_checkpoint(self, epoch):
     if not self.is_master: return
