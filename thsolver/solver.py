@@ -221,7 +221,8 @@ class Solver:
 
   def save_best_checkpoint(self, tracker: AverageTracker, epoch: int):
     best_val = self.FLAGS.SOLVER.best_val
-    if not best_val: return  # return if best_val is empty
+    if not (best_val and self.FLAGS.SOLVER.run == 'train'):
+      return  # return if best_val is empty or it is not in the train mode
 
     compare, key = best_val.split(':')
     key = 'test/' + key
