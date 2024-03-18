@@ -410,9 +410,9 @@ class Solver:
     if world_size > 1:
       # Initialize the process group. Currently, the code only supports the
       # `single node + multiple GPU` mode.
+      url = 'tcp://localhost:%d' % FLAGS.SOLVER.port
       torch.distributed.init_process_group(
-          backend='nccl', init_method=FLAGS.SOLVER.dist_url,
-          world_size=world_size, rank=rank)
+          backend='nccl', init_method=url, world_size=world_size, rank=rank)
 
     # The master process is responsible for logging, writing and loading
     # checkpoints. In the multi-GPU setting, we assign the master role to
