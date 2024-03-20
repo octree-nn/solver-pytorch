@@ -146,7 +146,7 @@ class Solver:
     log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       # load data
-      batch = self.train_iter.next()
+      batch = next(self.train_iter)
       batch['iter_num'] = it
       batch['epoch'] = epoch
       elapsed_time['time/data'] = torch.Tensor([time.time() - tick])
@@ -191,7 +191,7 @@ class Solver:
     rng = range(len(self.test_loader))
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       # forward
-      batch = self.test_iter.next()
+      batch = next(self.test_iter)
       batch['iter_num'] = it
       batch['epoch'] = epoch
       # with torch.no_grad():
@@ -213,7 +213,7 @@ class Solver:
     if eval_step < 1:
       eval_step = len(self.test_loader)
     for it in tqdm(range(eval_step), ncols=80, leave=False):
-      batch = self.test_iter.next()
+      batch = next(self.test_iter)
       batch['iter_num'] = it
       batch['epoch'] = epoch
       with torch.no_grad():
