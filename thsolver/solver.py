@@ -13,6 +13,7 @@ import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
 import time
+from packaging import version
 import random
 import numpy as np
 from tqdm import tqdm
@@ -364,26 +365,22 @@ class Solver:
     logdir = self.FLAGS.SOLVER.logdir
 
     # check
-    version = torch.__version__.split('.')
-    larger_than_110 = int(version[0]) > 0 and int(version[1]) > 10
-    if not larger_than_110:
-      print('The profile function is only available for Pytorch>=1.10.0.')
+    larger_than_191 = version.parse(torch.__version__) > version.parse('1.9.1')
+    if not larger_than_191:
+      print('This function is only available for Pytorch>1.9.1.')
       return
 
-    # warm up
-    batch = next(iter(self.train_loader))
-    for _ in range(3):
-      output = self.train_step(batch)
-      output['train/loss'].backward()
-
     # profile
+    batch = next(iter(self.train_loader))
+    schedule = torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1)
+    activities = [torch.profiler.ProfilerActivity.CPU,
+                  torch.profiler.ProfilerActivity.CUDA, ]
     with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CPU,
-                        torch.profiler.ProfilerActivity.CUDA, ],
+            activities=activities, schedule=schedule,
             on_trace_ready=torch.profiler.tensorboard_trace_handler(logdir),
             record_shapes=True, profile_memory=True, with_stack=True,
             with_modules=True) as prof:
-      for i in range(3):
+      for _ in range(5):
         output = self.train_step(batch)
         output['train/loss'].backward()
         prof.step()
