@@ -13,10 +13,10 @@ import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
 import time
-from packaging import version
 import random
 import numpy as np
 from tqdm import tqdm
+from packaging import version
 from torch.utils.tensorboard import SummaryWriter
 
 from .sampler import InfSampler, DistributedInfSampler

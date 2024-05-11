@@ -10,6 +10,7 @@ from torch.utils.data import Sampler, DistributedSampler, Dataset
 
 
 class InfSampler(Sampler):
+
   def __init__(self, dataset: Dataset, shuffle: bool = True) -> None:
     self.dataset = dataset
     self.shuffle = shuffle
@@ -37,6 +38,7 @@ class InfSampler(Sampler):
 
 
 class DistributedInfSampler(DistributedSampler):
+
   def __init__(self, dataset: Dataset, shuffle: bool = True) -> None:
     super().__init__(dataset, shuffle=shuffle)
     self.reset_sampler()
