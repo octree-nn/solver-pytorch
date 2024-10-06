@@ -44,18 +44,26 @@ class Solver:
     self.best_val = None        # used to save the best validation result
 
   def get_model(self):
+    r''' Return a model. '''
     raise NotImplementedError
 
   def get_dataset(self, flags):
+    r''' Return a dataset and a collate function. '''
     raise NotImplementedError
 
   def train_step(self, batch):
+    r''' Return a dict containing the training loss and other information.
+    The returned dict should contain the key 'train/loss', which is a scalar
+    and will be used to calculate the gradient and update the model.
+    '''
     raise NotImplementedError
 
   def test_step(self, batch):
+    r''' Return a dict containing the testing loss and other information. '''
     raise NotImplementedError
 
   def eval_step(self, batch):
+    r''' Evaluate the model on the batch. '''
     raise NotImplementedError
 
   def result_callback(self, avg_tracker: AverageTracker, epoch):
