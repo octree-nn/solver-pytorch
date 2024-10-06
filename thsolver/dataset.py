@@ -39,8 +39,8 @@ class Dataset(torch.utils.data.Dataset):
     return len(self.filenames)
 
   def __getitem__(self, idx):
-    sample = self.samples[idx] if self.in_memory else \
-             self.read_file(os.path.join(self.root, self.filenames[idx]))  # noqa
+    sample = (self.samples[idx] if self.in_memory else
+              self.read_file(os.path.join(self.root, self.filenames[idx])))
     output = self.transform(sample, idx)    # data augmentation + build octree
     output['label'] = self.labels[idx]
     output['filename'] = self.filenames[idx]
