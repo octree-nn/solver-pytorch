@@ -154,6 +154,10 @@ class Solver:
     rng = range(len(self.train_loader))
     log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
+      # clear cache every 50 iterations
+      if it % 50 == 0 and self.FLAGS.SOLVER.empty_cache:
+        torch.cuda.empty_cache()
+
       # load data
       batch = next(self.train_iter)
       batch['iter_num'] = it
@@ -179,10 +183,6 @@ class Solver:
       output.update(elapsed_time)
       train_tracker.update(output)
 
-      # clear cache every 50 iterations
-      if it % 50 == 0 and self.FLAGS.SOLVER.empty_cache:
-        torch.cuda.empty_cache()
-
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
         notes = 'iter: %d' % it
@@ -199,6 +199,10 @@ class Solver:
     test_tracker = AverageTracker()
     rng = range(len(self.test_loader))
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
+      # clear cache every 50 iterations
+      if it % 50 == 0 and self.FLAGS.SOLVER.empty_cache:
+        torch.cuda.empty_cache()
+
       # forward
       batch = next(self.test_iter)
       batch['iter_num'] = it
