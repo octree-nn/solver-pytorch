@@ -1,6 +1,6 @@
 # The Solver for PyTorch
 
-![PyPI Downloads](https://static.pepy.tech/badge/thsolver)
+[![PyPI Downloads](https://static.pepy.tech/badge/thsolver)](https://pepy.tech/project/thsolver)
 [![PyPI](https://img.shields.io/pypi/v/thsolver)](https://pypi.org/project/thsolver/)
 
 

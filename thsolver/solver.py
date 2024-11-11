@@ -105,7 +105,11 @@ class Solver:
           output_device=self.device, broadcast_buffers=False,
           find_unused_parameters=flags.find_unused_parameters)
     if self.is_master:
-      print(model)
+      print(model)  # print the model structure
+      total_params = 0
+      for p in model.parameters():
+        total_params += p.numel()
+      print("Total number of parameters: %.3fM" % (total_params / 1e6))
     self.model = model
 
   def config_optimizer(self):
