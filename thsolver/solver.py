@@ -12,7 +12,6 @@ import torch.optim
 import torch.distributed
 import torch.multiprocessing
 import torch.utils.data
-import time
 import random
 import numpy as np
 from tqdm import tqdm
@@ -152,8 +151,6 @@ class Solver:
     if self.world_size > 1:
       self.train_loader.sampler.set_epoch(epoch)
 
-    tick = time.time()
-    elapsed_time = dict()
     train_tracker = AverageTracker()
     rng = range(len(self.train_loader))
     log_per_iter = self.FLAGS.SOLVER.log_per_iter
@@ -166,7 +163,6 @@ class Solver:
       batch = next(self.train_iter)
       batch['iter_num'] = it
       batch['epoch'] = epoch
-      elapsed_time['time/data'] = torch.Tensor([time.time() - tick])
 
       # forward and backward
       self.optimizer.zero_grad()
@@ -182,9 +178,6 @@ class Solver:
       self.optimizer.step()
 
       # track the averaged tensors
-      elapsed_time['time/batch'] = torch.Tensor([time.time() - tick])
-      tick = time.time()
-      output.update(elapsed_time)
       train_tracker.update(output)
 
       # output intermediate logs
@@ -215,7 +208,7 @@ class Solver:
       output = self.test_step(batch)
 
       # track the averaged tensors
-      test_tracker.update(output)
+      test_tracker.update(output, record_time=False)
 
     if self.world_size > 1:
       test_tracker.average_all_gather()

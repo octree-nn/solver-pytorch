@@ -8,9 +8,10 @@
 import time
 import torch
 import torch.distributed
+from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Optional
 
 
 class AverageTracker:
@@ -19,9 +20,10 @@ class AverageTracker:
     self.value = dict()
     self.num = dict()
     self.max_len = 76
+    self.tick = time.time()
     self.start_time = time.time()
 
-  def update(self, value: Dict[str, torch.Tensor]):
+  def update(self, value: Dict[str, torch.Tensor], record_time: bool = True):
     r'''Update the tracker with the given value, which is called at the end of
     each iteration.
     '''
@@ -29,11 +31,18 @@ class AverageTracker:
     if not value:
       return    # empty input, return
 
+    # roughly record the update time
+    if record_time:
+      curr_time = time.time()
+      value['time/iter'] = torch.Tensor([curr_time - self.tick])
+      self.tick = curr_time
+
+    # update the value and num
     for key, val in value.items():
       self.value[key] = self.value.get(key, 0) + val.detach()
       self.num[key] = self.num.get(key, 0) + 1
 
-  def average(self):
+  def _average(self):
     return {key: val.item() / self.num[key] for key, val in self.value.items()}
 
   @torch.no_grad()
@@ -51,15 +60,18 @@ class AverageTracker:
       tensors = torch.stack(tensors_gather, dim=0)
       self.value[key] = torch.mean(tensors)
 
-  def log(self, epoch, summary_writer=None, log_file=None, msg_tag='->',
-          notes='', print_time=True, print_memory=False):
-    if not self.value: return  # empty, return
+  def log(self, epoch: int, summary_writer: Optional[SummaryWriter] = None,
+          log_file: Optional[str] = None, msg_tag: str = '->', notes: str = '',
+          print_time: bool = True, print_memory: bool = False):
+    r'''Log the average value to the console, tensorboard and log file.
+    '''
+    if not self.value:
+      return  # empty, return
 
-    avg = self.average()
+    avg = self._average()
     msg = 'Epoch: %d' % epoch
     for key, val in avg.items():
-      if print_time or 'time' not in key:
-        msg += ', %s: %.3f' % (key, val)
+      msg += ', %s: %.3f' % (key, val)
       if summary_writer is not None:
         summary_writer.add_scalar(key, val, epoch)
 
