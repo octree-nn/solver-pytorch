@@ -126,6 +126,7 @@ def _load_from_file(filename):
         cfg = CN.load_cfg(fid)
       cfgs.append(cfg)
       if 'BASE' in cfg:
+        assert isinstance(cfg.BASE, list), 'BASE should be a list'
         bases += cfg.BASE
   cfgs.reverse()
   return cfgs
@@ -140,7 +141,7 @@ def _update_config(FLAGS, args):
       FLAGS.merge_from_other_cfg(cfg)
   if args.opts:
     FLAGS.merge_from_list(args.opts)
-  FLAGS.SYS.cmds = ' '.join(sys.argv)
+  FLAGS.SYS.cmds = 'python ' + ' '.join(sys.argv)
 
   # update logdir
   alias = FLAGS.SOLVER.alias.lower()
