@@ -42,7 +42,7 @@ class AverageTracker:
       self.value[key] = self.value.get(key, 0) + val.detach()
       self.num[key] = self.num.get(key, 0) + 1
 
-  def _average(self):
+  def average(self):
     return {key: val.item() / self.num[key] for key, val in self.value.items()}
 
   @torch.no_grad()
@@ -68,7 +68,7 @@ class AverageTracker:
     if not self.value:
       return  # empty, return
 
-    avg = self._average()
+    avg = self.average()
     msg = 'Epoch: %d' % epoch
     for key, val in avg.items():
       msg += ', %s: %.3f' % (key, val)
