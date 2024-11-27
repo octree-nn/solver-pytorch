@@ -62,7 +62,7 @@ _C.DATA.train.pin_memory    = True
 # For octree building
 _C.DATA.train.depth         = 5           # The octree depth
 _C.DATA.train.full_depth    = 2           # The full depth
-_C.DATA.train.adaptive      = False       # Build the adaptive octree
+# _C.DATA.train.adaptive      = False       # Build the adaptive octree
 
 # For transformation
 _C.DATA.train.orient_normal = ''          # Used to re-orient normal directions
@@ -84,7 +84,7 @@ _C.DATA.train.batch_size    = 32          # Training data batch size
 _C.DATA.train.take          = -1          # Number of samples used for training
 _C.DATA.train.num_workers   = 4           # Number of workers to load the data
 _C.DATA.train.shuffle       = False       # Shuffle the input data
-_C.DATA.train.in_memory     = False       # Load the training data into memory
+# _C.DATA.train.in_memory     = False       # Load the training data into memory
 
 
 _C.DATA.test = _C.DATA.train.clone()
@@ -105,8 +105,8 @@ _C.MODEL.find_unused_parameters = False   # Used in DistributedDataParallel
 # loss related parameters
 _C.LOSS = CN(new_allowed=True)
 _C.LOSS.name                = ''          # The name of the loss
-_C.LOSS.num_class           = 40          # The class number for the cross-entropy loss
-_C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
+# _C.LOSS.num_class           = 40          # The class number for the cross-entropy loss
+# _C.LOSS.label_smoothing     = 0.0         # The factor of label smoothing
 
 
 # backup the commands
