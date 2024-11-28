@@ -151,12 +151,13 @@ class Solver:
     if self.world_size > 1:
       self.train_loader.sampler.set_epoch(epoch)
 
+    flags = self.FLAGS.SOLVER
     train_tracker = AverageTracker()
+    log_per_iter = flags.log_per_iter
     rng = range(len(self.train_loader))
-    log_per_iter = self.FLAGS.SOLVER.log_per_iter
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       # clear cache every 50 iterations
-      if it % 50 == 0 and self.FLAGS.SOLVER.empty_cache:
+      if flags.empty_cache > 0 and it % flags.empty_cache == 0:
         torch.cuda.empty_cache()
 
       # load data
@@ -165,12 +166,12 @@ class Solver:
       batch['epoch'] = epoch
 
       # forward and backward
-      self.optimizer.zero_grad()
+      self.optimizer.zero_grad(flags.zero_grad_to_none)
       output = self.train_step(batch)
       output['train/loss'].backward()
 
       # grad clip
-      clip_grad = self.FLAGS.SOLVER.clip_grad
+      clip_grad = flags.clip_grad
       if clip_grad > 0:
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
 
