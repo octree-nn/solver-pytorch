@@ -339,12 +339,12 @@ class Solver:
       # testing or not
       if epoch % self.FLAGS.SOLVER.test_every_epoch != 0:
         continue
-
-      # testing epoch
-      self.test_epoch(epoch)
-
+      
       # checkpoint
       self.save_checkpoint(epoch)
+      
+      # testing epoch
+      self.test_epoch(epoch)     
 
     # sync and exit
     if self.world_size > 1:
