@@ -33,10 +33,12 @@ class Solver:
     self.device = torch.cuda.current_device()
     self.disable_tqdm = not (is_master and FLAGS.SOLVER.progress_bar)
     self.start_epoch = 1
+    self.use_amp = FLAGS.SOLVER.use_amp
 
     self.model = None           # torch.nn.Module
     self.optimizer = None       # torch.optim.Optimizer
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
+    self.scaler = None          # torch.GradScaler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
     self.eval_rst = dict()      # used to save evalation results
@@ -129,6 +131,9 @@ class Solver:
           parameters, lr=base_lr, weight_decay=flags.weight_decay)
     else:
       raise ValueError
+    
+    # config the gradscaler
+    self.scaler = torch.GradScaler()
 
   def config_lr_scheduler(self):
     # This function must be called after :func:`configure_optimizer`
@@ -167,16 +172,23 @@ class Solver:
 
       # forward and backward
       self.optimizer.zero_grad(flags.zero_grad_to_none)
-      output = self.train_step(batch)
-      output['train/loss'].backward()
+      with torch.autocast("cuda", enabled=self.use_amp):
+        output = self.train_step(batch)
 
-      # grad clip
-      clip_grad = flags.clip_grad
-      if clip_grad > 0:
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
-
-      # apply the gradient
-      self.optimizer.step()
+      if self.use_amp:
+        self.scaler.scale(output['train/loss']).backward()
+        clip_grad = self.FLAGS.SOLVER.clip_grad
+        if clip_grad > 0:
+          self.scaler.unscale_(self.optimizer)
+          torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+      else:
+        output['train/loss'].backward()
+        clip_grad = self.FLAGS.SOLVER.clip_grad
+        if clip_grad > 0:
+          torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
+        self.optimizer.step()
 
       # track the averaged tensors
       train_tracker.update(output)
@@ -269,7 +281,8 @@ class Solver:
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
                 'optimizer_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict(), },
+                'scheduler_dict': self.scheduler.state_dict(), 
+                'scaler_dict': self.scaler.state_dict()},
                ckpt_name + '.solver.tar')
 
   def load_checkpoint(self):
@@ -295,6 +308,8 @@ class Solver:
         self.optimizer.load_state_dict(trained_dict['optimizer_dict'])
       if self.scheduler:
         self.scheduler.load_state_dict(trained_dict['scheduler_dict'])
+      if self.scaler and 'scaler_dict' in trained_dict:
+        self.scaler.load_state_dict(trained_dict['scaler_dict'])
     else:
       model_dict = trained_dict
     model = self.model.module if self.world_size > 1 else self.model
