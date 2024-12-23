@@ -131,7 +131,7 @@ class Solver:
           parameters, lr=base_lr, weight_decay=flags.weight_decay)
     else:
       raise ValueError
-    
+
     # config the gradscaler
     self.scaler = torch.GradScaler()
 
@@ -172,20 +172,21 @@ class Solver:
 
       # forward and backward
       self.optimizer.zero_grad(flags.zero_grad_to_none)
-      with torch.autocast("cuda", enabled=self.use_amp):
+      with torch.autocast('cuda', enabled=self.use_amp):
         output = self.train_step(batch)
+        # 'train/loss' is a special key reserved for backward
+        loss = output['train/loss']
 
+      clip_grad = self.FLAGS.SOLVER.clip_grad
       if self.use_amp:
-        self.scaler.scale(output['train/loss']).backward()
-        clip_grad = self.FLAGS.SOLVER.clip_grad
+        self.scaler.scale(loss).backward()
         if clip_grad > 0:
           self.scaler.unscale_(self.optimizer)
           torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
         self.scaler.step(self.optimizer)
         self.scaler.update()
       else:
-        output['train/loss'].backward()
-        clip_grad = self.FLAGS.SOLVER.clip_grad
+        loss.backward()
         if clip_grad > 0:
           torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
         self.optimizer.step()
@@ -281,7 +282,7 @@ class Solver:
     torch.save(model_dict, ckpt_name + '.model.pth')
     torch.save({'model_dict': model_dict, 'epoch': epoch,
                 'optimizer_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict(), 
+                'scheduler_dict': self.scheduler.state_dict(),
                 'scaler_dict': self.scaler.state_dict()},
                ckpt_name + '.solver.tar')
 
@@ -354,12 +355,12 @@ class Solver:
       # testing or not
       if epoch % self.FLAGS.SOLVER.test_every_epoch != 0:
         continue
-      
+
       # checkpoint
       self.save_checkpoint(epoch)
-      
+
       # testing epoch
-      self.test_epoch(epoch)     
+      self.test_epoch(epoch)
 
     # sync and exit
     if self.world_size > 1:
