@@ -133,7 +133,8 @@ class Solver:
       raise ValueError
 
     # config the gradscaler
-    self.scaler = torch.GradScaler()
+    newer_than_230 = version.parse(torch.__version__) > version.parse('2.3.0')
+    self.scaler = torch.GradScaler() if newer_than_230 else torch.cuda.amp.GradScaler()
 
   def config_lr_scheduler(self):
     # This function must be called after :func:`configure_optimizer`
@@ -309,7 +310,7 @@ class Solver:
         self.optimizer.load_state_dict(trained_dict['optimizer_dict'])
       if self.scheduler:
         self.scheduler.load_state_dict(trained_dict['scheduler_dict'])
-      if self.scaler and 'scaler_dict' in trained_dict:
+      if self.use_amp and 'scaler_dict' in trained_dict:
         self.scaler.load_state_dict(trained_dict['scaler_dict'])
     else:
       model_dict = trained_dict
@@ -391,8 +392,8 @@ class Solver:
     logdir = self.FLAGS.SOLVER.logdir
 
     # check
-    larger_than_191 = version.parse(torch.__version__) > version.parse('1.9.1')
-    if not larger_than_191:
+    newer_than_191 = version.parse(torch.__version__) > version.parse('1.9.1')
+    if not newer_than_191:
       print('This function is only available for Pytorch>1.9.1.')
       return
 
