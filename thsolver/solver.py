@@ -38,11 +38,14 @@ class Solver:
     self.model = None           # torch.nn.Module
     self.optimizer = None       # torch.optim.Optimizer
     self.scheduler = None       # torch.optim.lr_scheduler._LRScheduler
-    self.scaler = None          # torch.GradScaler
     self.summary_writer = None  # torch.utils.tensorboard.SummaryWriter
     self.log_file = None        # str, used to save training logs
     self.eval_rst = dict()      # used to save evalation results
     self.best_val = None        # used to save the best validation result
+
+    # config the gradscaler
+    newer_than_230 = version.parse(torch.__version__) > version.parse('2.3.0')
+    self.scaler = torch.GradScaler() if newer_than_230 else torch.cuda.amp.GradScaler()
 
   def get_model(self):
     r''' Return a model. '''
@@ -131,10 +134,6 @@ class Solver:
           parameters, lr=base_lr, weight_decay=flags.weight_decay)
     else:
       raise ValueError
-
-    # config the gradscaler
-    newer_than_230 = version.parse(torch.__version__) > version.parse('2.3.0')
-    self.scaler = torch.GradScaler() if newer_than_230 else torch.cuda.amp.GradScaler()
 
   def config_lr_scheduler(self):
     # This function must be called after :func:`configure_optimizer`
