@@ -29,7 +29,10 @@ class Solver:
   def __init__(self, FLAGS, is_master=True):
     self.FLAGS = FLAGS
     self.is_master = is_master
-    self.world_size = len(FLAGS.SOLVER.gpu)
+    if FLAGS.SOLVER.ddp_mode == "spawn":
+      self.world_size = len(FLAGS.SOLVER.gpu)
+    elif FLAGS.SOLVER.ddp_mode == "torchrun":
+      self.world_size = int(os.environ.get("WORLD_SIZE", 1))
     self.device = torch.cuda.current_device()
     self.disable_tqdm = not (is_master and FLAGS.SOLVER.progress_bar)
     self.start_epoch = 1
@@ -466,6 +469,7 @@ class Solver:
       else:
         cls.worker(0, FLAGS)
     elif FLAGS.SOLVER.ddp_mode == "torchrun":
+      # FLAGS.SOLVER.gpu = os.environ.get("CUDA_VISIBLE_DEVICES", "")
       rank = int(os.environ.get("RANK", 0))
       cls.worker(rank, FLAGS)
     else:

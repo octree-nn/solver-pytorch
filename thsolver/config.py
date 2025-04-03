@@ -181,6 +181,8 @@ def parse_args(backup=True):
   parser = argparse.ArgumentParser(description='The configs')
   parser.add_argument('--config', type=str,
                       help='experiment configure file name')
+  parser.add_argument('--local-rank', type=int, default=0,
+                      help='local rank for distributed training')
   parser.add_argument('opts', nargs=argparse.REMAINDER,
                       help="Modify config options using the command-line")
 
