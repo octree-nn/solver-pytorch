@@ -40,6 +40,7 @@ _C.SOLVER.log_per_iter      = -1         # Output log every k training iteration
 _C.SOLVER.best_val          = 'min:loss' # The best validation metric
 _C.SOLVER.zero_grad_to_none = False      # Set optimizer.zero_grad(set_to_none)
 _C.SOLVER.use_amp           = False      # Use automatic mixed precision
+_C.SOLVER.ddp_mode          = 'spawn'     # DistributedDataParallel mode
 
 _C.SOLVER.lr_type           = 'step'     # Learning rate type: step or cos
 _C.SOLVER.lr                = 0.1        # Initial learning rate

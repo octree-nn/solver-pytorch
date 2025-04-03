@@ -425,18 +425,28 @@ class Solver:
 
   @classmethod
   def worker(cls, rank, FLAGS):
-    # Set the GPU to use.
-    gpu = FLAGS.SOLVER.gpu
-    torch.cuda.set_device(gpu[rank])
+    if FLAGS.SOLVER.ddp_mode == "spawn":
+      # Set the GPU to use.
+      gpu = FLAGS.SOLVER.gpu
+      torch.cuda.set_device(gpu[rank])
+      world_size = len(gpu)
+      if world_size > 1:
+        # Initialize the process group. Currently, the code only supports the
+        # `single node + multiple GPU` mode.
+        url = 'tcp://localhost:%d' % FLAGS.SOLVER.port
+        torch.distributed.init_process_group(
+            backend='nccl', init_method=url, world_size=world_size, rank=rank)
 
-    world_size = len(gpu)
-    if world_size > 1:
-      # Initialize the process group. Currently, the code only supports the
-      # `single node + multiple GPU` mode.
-      url = 'tcp://localhost:%d' % FLAGS.SOLVER.port
-      torch.distributed.init_process_group(
-          backend='nccl', init_method=url, world_size=world_size, rank=rank)
-
+    elif FLAGS.SOLVER.ddp_mode == "torchrun":
+      world_size = int(os.environ.get("WORLD_SIZE", 1))
+      local_rank = int(os.environ.get("LOCAL_RANK", 0))
+      torch.cuda.set_device(local_rank)
+      if world_size > 1:
+        torch.distributed.init_process_group(
+            backend="nccl",
+            init_method="env://",
+        )
+    
     # The master process is responsible for logging, writing and loading
     # checkpoints. In the multi-GPU setting, we assign the master role to
     # the rank 0 process.
@@ -449,8 +459,14 @@ class Solver:
     cls.update_configs()
     FLAGS = parse_args()
 
-    num_gpus = len(FLAGS.SOLVER.gpu)
-    if num_gpus > 1:
-      torch.multiprocessing.spawn(cls.worker, nprocs=num_gpus, args=(FLAGS,))
+    if FLAGS.SOLVER.ddp_mode == "spawn":
+      num_gpus = len(FLAGS.SOLVER.gpu)
+      if num_gpus > 1:
+        torch.multiprocessing.spawn(cls.worker, nprocs=num_gpus, args=(FLAGS,))
+      else:
+        cls.worker(0, FLAGS)
+    elif FLAGS.SOLVER.ddp_mode == "torchrun":
+      rank = int(os.environ.get("RANK", 0))
+      cls.worker(rank, FLAGS)
     else:
-      cls.worker(0, FLAGS)
+      raise NotImplementedError
