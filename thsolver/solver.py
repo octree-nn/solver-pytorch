@@ -434,22 +434,24 @@ class Solver:
       torch.cuda.set_device(gpu[rank])
       world_size = len(gpu)
       if world_size > 1:
-        # Initialize the process group. Currently, the code only supports the
+        # Initialize the process group. This piece of code only supports the
         # `single node + multiple GPU` mode.
         url = 'tcp://localhost:%d' % FLAGS.SOLVER.port
         torch.distributed.init_process_group(
-            backend='nccl', init_method=url, world_size=world_size, rank=rank)
-
+            backend='nccl', init_method=url, world_size=world_size, rank=rank,)
     elif FLAGS.SOLVER.ddp_mode == "torchrun":
       world_size = int(os.environ.get("WORLD_SIZE", 1))
       local_rank = int(os.environ.get("LOCAL_RANK", 0))
       torch.cuda.set_device(local_rank)
       if world_size > 1:
+        # Initialize the process group. torch.distributed.run ensures that this
+        # will work by exporting all the env vars needed to initialize the
+        # process group. Support `multiple nodes + multiple GPUs` mode.
         torch.distributed.init_process_group(
-            backend="nccl",
-            init_method="env://",
-        )
-    
+            backend="nccl", init_method="env://",)
+    else:
+      raise NotImplementedError
+
     # The master process is responsible for logging, writing and loading
     # checkpoints. In the multi-GPU setting, we assign the master role to
     # the rank 0 process.
