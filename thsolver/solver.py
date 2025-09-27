@@ -459,6 +459,10 @@ class Solver:
     the_solver = cls(FLAGS, is_master)
     the_solver.run()
 
+    # clean up
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
+
   @classmethod
   def main(cls):
     cls.update_configs()
