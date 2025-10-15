@@ -344,7 +344,8 @@ class Solver:
     self.configure_log()
     self.load_checkpoint()
 
-    rng = range(self.start_epoch, self.FLAGS.SOLVER.max_epoch+1)
+    flags = self.FLAGS.SOLVER
+    rng = range(self.start_epoch, flags.max_epoch+1)
     for epoch in tqdm(rng, ncols=80, disable=self.disable_tqdm):
       # training epoch
       self.train_epoch(epoch)
@@ -355,15 +356,10 @@ class Solver:
         lr = self.scheduler.get_last_lr()  # lr is a list
         self.summary_writer.add_scalar('train/lr', lr[0], epoch)
 
-      # testing or not
-      if epoch % self.FLAGS.SOLVER.test_every_epoch != 0:
-        continue
-
-      # checkpoint
-      self.save_checkpoint(epoch)
-
-      # testing epoch
-      self.test_epoch(epoch)
+      # checkpoint and test at specified intervals
+      if epoch != 0 and epoch % flags.test_every_epoch == 0:
+        self.save_checkpoint(epoch)
+        self.test_epoch(epoch)
 
     # sync and exit
     if self.world_size > 1:
@@ -461,7 +457,7 @@ class Solver:
 
     # clean up
     if torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group()
+      torch.distributed.destroy_process_group()
 
   @classmethod
   def main(cls):
