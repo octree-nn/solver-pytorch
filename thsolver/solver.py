@@ -29,10 +29,7 @@ class Solver:
   def __init__(self, FLAGS, is_master=True):
     self.FLAGS = FLAGS
     self.is_master = is_master
-    if FLAGS.SOLVER.ddp_mode == "spawn":
-      self.world_size = len(FLAGS.SOLVER.gpu)
-    elif FLAGS.SOLVER.ddp_mode == "torchrun":
-      self.world_size = int(os.environ.get("WORLD_SIZE", 1))
+    self.world_size = self.get_world_size(FLAGS)
     self.device = torch.cuda.current_device()
     self.disable_tqdm = not (is_master and FLAGS.SOLVER.progress_bar)
     self.start_epoch = 1
@@ -418,17 +415,29 @@ class Solver:
   def run(self):
     eval('self.%s()' % self.FLAGS.SOLVER.run)
 
+  @staticmethod
+  def get_world_size(FLAGS):
+    world_size = 1
+    if FLAGS.SOLVER.ddp_mode == "spawn":
+      world_size = len(FLAGS.SOLVER.gpu)
+    elif FLAGS.SOLVER.ddp_mode == "torchrun":
+      world_size = int(os.environ.get("WORLD_SIZE", 1))
+    else:
+      raise NotImplementedError
+    return world_size
+
   @classmethod
   def update_configs(cls):
     pass
 
   @classmethod
   def worker(cls, rank, FLAGS):
+    world_size = cls.get_world_size(FLAGS)
+
     if FLAGS.SOLVER.ddp_mode == "spawn":
       # Set the GPU to use.
-      gpu = FLAGS.SOLVER.gpu
-      torch.cuda.set_device(gpu[rank])
-      world_size = len(gpu)
+      gpu_rank = FLAGS.SOLVER.gpu[rank]
+      torch.cuda.set_device(gpu_rank)
       if world_size > 1:
         # Initialize the process group. This piece of code only supports the
         # `single node + multiple GPU` mode.
@@ -436,7 +445,6 @@ class Solver:
         torch.distributed.init_process_group(
             backend='nccl', init_method=url, world_size=world_size, rank=rank,)
     elif FLAGS.SOLVER.ddp_mode == "torchrun":
-      world_size = int(os.environ.get("WORLD_SIZE", 1))
       local_rank = int(os.environ.get("LOCAL_RANK", 0))
       torch.cuda.set_device(local_rank)
       if world_size > 1:
@@ -447,6 +455,10 @@ class Solver:
             backend="nccl", init_method="env://",)
     else:
       raise NotImplementedError
+
+    # make sure all processes start from here
+    if torch.distributed.is_initialized():
+      torch.distributed.barrier()
 
     # The master process is responsible for logging, writing and loading
     # checkpoints. In the multi-GPU setting, we assign the master role to
