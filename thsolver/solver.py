@@ -193,6 +193,7 @@ class Solver:
 
       # track the averaged tensors
       avg_tracker.update(output)
+      avg_tracker.record_time()
 
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
@@ -203,7 +204,7 @@ class Solver:
     if self.world_size > 1:
       avg_tracker.average_all_gather()
     if self.is_master:
-      avg_tracker.log(epoch, self.summary_writer)
+      avg_tracker.log(epoch, self.summary_writer, print_time=True)
 
   def test_epoch(self, epoch):
     self.model.eval()

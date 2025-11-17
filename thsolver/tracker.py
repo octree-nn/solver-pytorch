@@ -20,30 +20,26 @@ class AverageTracker:
     self.value = dict()
     self.num = dict()
     self.max_len = 76
-    self.tick = time.time()
+    torch.cuda.synchronize()
     self.start_time = time.time()
 
   def update(self, value: Dict[str, torch.Tensor], record_time: bool = True):
-    r'''Update the tracker with the given value, which is called at the end of
-    each iteration.
+    r'''Update the tracker with the given value. This function is called at the
+    end of each iteration.
     '''
-
-    if not value:
-      return    # empty input, return
-
-    # roughly record the update time
-    if record_time:
-      curr_time = time.time()
-      value['time/iter'] = torch.Tensor([curr_time - self.tick])
-      self.tick = curr_time
-
-    # update the value and num
     for key, val in value.items():
       self.value[key] = self.value.get(key, 0) + val.detach()
       self.num[key] = self.num.get(key, 0) + 1
 
+  def record_time(self, num_iters: int = 1):
+    r''' roughly record the time relative to the construction of the tracker.
+    '''
+    torch.cuda.synchronize()
+    self.value['time/iter'] = time.time() - self.start_time
+    self.num['time/iter'] = self.num.get('time/iter', 0) + num_iters
+
   def average(self):
-    return {key: val.item() / self.num[key] for key, val in self.value.items()}
+    return {key: float(val) / self.num[key] for key, val in self.value.items()}
 
   @torch.no_grad()
   def average_all_gather(self):
@@ -65,8 +61,6 @@ class AverageTracker:
           print_time: bool = True, print_memory: bool = False):
     r'''Log the average value to the console, tensorboard and log file.
     '''
-    if not self.value:
-      return  # empty, return
 
     avg = self.average()
     msg = 'Epoch: %d' % epoch
@@ -90,6 +84,7 @@ class AverageTracker:
     # time
     time_str = ''
     if print_time:
+      torch.cuda.synchronize()
       curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
       duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
       time_str = curr_time + duration
