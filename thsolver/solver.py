@@ -157,7 +157,7 @@ class Solver:
       self.train_loader.sampler.set_epoch(epoch)
 
     flags = self.FLAGS.SOLVER
-    train_tracker = AverageTracker()
+    avg_tracker = AverageTracker()
     log_per_iter = flags.log_per_iter
     rng = range(len(self.train_loader))
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
@@ -192,22 +192,22 @@ class Solver:
         self.optimizer.step()
 
       # track the averaged tensors
-      train_tracker.update(output)
+      avg_tracker.update(output)
 
       # output intermediate logs
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
         notes = 'iter: %d' % it
-        train_tracker.log(epoch, msg_tag='- ', notes=notes, print_time=False)
+        avg_tracker.log(epoch, msg_tag='- ', notes=notes, print_time=False)
 
     # save logs
     if self.world_size > 1:
-      train_tracker.average_all_gather()
+      avg_tracker.average_all_gather()
     if self.is_master:
-      train_tracker.log(epoch, self.summary_writer)
+      avg_tracker.log(epoch, self.summary_writer)
 
   def test_epoch(self, epoch):
     self.model.eval()
-    test_tracker = AverageTracker()
+    avg_tracker = AverageTracker()
     rng = range(len(self.test_loader))
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       # clear cache every 50 iterations
@@ -222,14 +222,14 @@ class Solver:
       output = self.test_step(batch)
 
       # track the averaged tensors
-      test_tracker.update(output, record_time=False)
+      avg_tracker.update(output, record_time=False)
 
     if self.world_size > 1:
-      test_tracker.average_all_gather()
+      avg_tracker.average_all_gather()
     if self.is_master:
-      self.result_callback(test_tracker, epoch)
-      self.save_best_checkpoint(test_tracker, epoch)
-      test_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
+      self.result_callback(avg_tracker, epoch)
+      self.save_best_checkpoint(avg_tracker, epoch)
+      avg_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
 
   def eval_epoch(self, epoch):
     self.model.eval()
@@ -433,6 +433,7 @@ class Solver:
   @classmethod
   def worker(cls, rank, FLAGS):
     world_size = cls.get_world_size(FLAGS)
+    newer_than_280 = version.parse(torch.__version__) >= version.parse('2.8.0')
 
     if FLAGS.SOLVER.ddp_mode == "spawn":
       # Set the GPU to use.
@@ -442,8 +443,12 @@ class Solver:
         # Initialize the process group. This piece of code only supports the
         # `single node + multiple GPU` mode.
         url = 'tcp://localhost:%d' % FLAGS.SOLVER.port
-        torch.distributed.init_process_group(
-            backend='nccl', init_method=url, world_size=world_size, rank=rank,)
+        param = {'backend': 'nccl', 'init_method': url,
+                 'world_size': world_size, 'rank': rank}
+        if newer_than_280: param['device_id'] = gpu_rank
+        torch.distributed.init_process_group(**param)
+        torch.distributed.barrier()
+
     elif FLAGS.SOLVER.ddp_mode == "torchrun":
       local_rank = int(os.environ.get("LOCAL_RANK", 0))
       torch.cuda.set_device(local_rank)
@@ -451,14 +456,13 @@ class Solver:
         # Initialize the process group. torch.distributed.run ensures that this
         # will work by exporting all the env vars needed to initialize the
         # process group. Support `multiple nodes + multiple GPUs` mode.
-        torch.distributed.init_process_group(
-            backend="nccl", init_method="env://",)
+        param = {'backend': 'nccl', 'init_method': 'env://'}
+        if newer_than_280: param['device_id'] = local_rank
+        torch.distributed.init_process_group(**param)
+        torch.distributed.barrier()
+
     else:
       raise NotImplementedError
-
-    # make sure all processes start from here
-    if torch.distributed.is_initialized():
-      torch.distributed.barrier()
 
     # The master process is responsible for logging, writing and loading
     # checkpoints. In the multi-GPU setting, we assign the master role to
