@@ -10,7 +10,7 @@ _dataset_entrypoints = {}
 
 
 def register_model(fn):
-  name = fn.__module__.split('.')[-1]
+  name = fn.__name__
   _model_entrypoints[name] = fn
   return fn
 
@@ -23,15 +23,19 @@ def is_model(name):
   return name in _model_entrypoints
 
 
+def list_models():
+  return list(_model_entrypoints.keys())
+
+
 def build_model(config, **kwargs):
-  name = config.name
+  name = config.name.lower()
   if not is_model(name):
     raise ValueError(f'Unkown model: {name}')
   return model_entrypoints(name)(config, **kwargs)
 
 
 def register_dataset(fn):
-  name = fn.__module__.split('.')[-1]
+  name = fn.__name__
   _dataset_entrypoints[name] = fn
   return fn
 
@@ -45,7 +49,11 @@ def is_dataset(name):
 
 
 def build_dataset(config, **kwargs):
-  name = config.name
+  name = config.name.lower()
   if not is_dataset(name):
     raise ValueError(f'Unkown dataset: {name}')
   return dataset_entrypoints(name)(config, **kwargs)
+
+
+def list_datasets():
+  return list(_dataset_entrypoints.keys())
