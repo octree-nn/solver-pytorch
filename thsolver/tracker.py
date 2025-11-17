@@ -23,7 +23,7 @@ class AverageTracker:
     torch.cuda.synchronize()
     self.start_time = time.time()
 
-  def update(self, value: Dict[str, torch.Tensor], record_time: bool = True):
+  def update(self, value: Dict[str, torch.Tensor]):
     r'''Update the tracker with the given value. This function is called at the
     end of each iteration.
     '''

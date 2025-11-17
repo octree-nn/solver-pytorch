@@ -158,7 +158,6 @@ class Solver:
 
     flags = self.FLAGS.SOLVER
     avg_tracker = AverageTracker()
-    log_per_iter = flags.log_per_iter
     rng = range(len(self.train_loader))
     for it in tqdm(rng, ncols=80, leave=False, disable=self.disable_tqdm):
       # clear cache every 50 iterations
@@ -196,6 +195,7 @@ class Solver:
       avg_tracker.record_time()
 
       # output intermediate logs
+      log_per_iter = flags.log_per_iter
       if self.is_master and log_per_iter > 0 and it % log_per_iter == 0:
         notes = 'iter: %d' % it
         avg_tracker.log(epoch, msg_tag='- ', notes=notes, print_time=False)
@@ -223,7 +223,7 @@ class Solver:
       output = self.test_step(batch)
 
       # track the averaged tensors
-      avg_tracker.update(output, record_time=False)
+      avg_tracker.update(output)
 
     if self.world_size > 1:
       avg_tracker.average_all_gather()
