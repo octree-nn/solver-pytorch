@@ -20,13 +20,17 @@ class AverageTracker:
     self.value = dict()
     self.num = dict()
     self.max_len = 76
+    self.start_time = self.get_time()
+
+  def get_time(self):
     torch.cuda.synchronize()
-    self.start_time = time.time()
+    return time.time()
 
   def update(self, value: Dict[str, torch.Tensor]):
     r'''Update the tracker with the given value. This function is called at the
     end of each iteration.
     '''
+
     for key, val in value.items():
       self.value[key] = self.value.get(key, 0) + val.detach()
       self.num[key] = self.num.get(key, 0) + 1
@@ -34,8 +38,8 @@ class AverageTracker:
   def record_time(self, num_iters: int = 1):
     r''' roughly record the time relative to the construction of the tracker.
     '''
-    torch.cuda.synchronize()
-    self.value['time/iter'] = time.time() - self.start_time
+
+    self.value['time/iter'] = self.get_time() - self.start_time
     self.num['time/iter'] = self.num.get('time/iter', 0) + num_iters
 
   def average(self):
@@ -48,13 +52,13 @@ class AverageTracker:
     '''
 
     for key, tensor in self.value.items():
-      if not (isinstance(tensor, torch.Tensor) and tensor.is_cuda):
-        continue  # only gather tensors on GPU
-      tensors_gather = [torch.ones_like(tensor)
-                        for _ in range(torch.distributed.get_world_size())]
-      torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-      tensors = torch.stack(tensors_gather, dim=0)
-      self.value[key] = torch.mean(tensors)
+      if isinstance(tensor, torch.Tensor) and tensor.is_cuda:
+        # only gather tensors on GPU
+        tensors_gather = [torch.ones_like(tensor)
+                          for _ in range(torch.distributed.get_world_size())]
+        torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
+        tensors = torch.stack(tensors_gather, dim=0)
+        self.value[key] = torch.mean(tensors)
 
   def log(self, epoch: int, summary_writer: Optional[SummaryWriter] = None,
           log_file: Optional[str] = None, msg_tag: str = '->', notes: str = '',
@@ -84,10 +88,9 @@ class AverageTracker:
     # time
     time_str = ''
     if print_time:
-      torch.cuda.synchronize()
-      curr_time = ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-      duration = ', duration: {:.2f}s'.format(time.time() - self.start_time)
-      time_str = curr_time + duration
+      curr_time = self.get_time()
+      time_str += ', time: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+      time_str += ', duration: {:.2f}s'.format(curr_time - self.start_time)
 
     # other notes
     if notes:
