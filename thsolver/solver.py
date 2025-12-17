@@ -33,7 +33,7 @@ class Solver:
     self.device = torch.cuda.current_device()
     self.disable_tqdm = not (is_master and FLAGS.SOLVER.progress_bar)
     self.start_epoch = 1
-    self.use_amp = FLAGS.SOLVER.use_amp
+    self.amp_mode = FLAGS.SOLVER.amp_mode
 
     self.model = None           # torch.nn.Module
     self.optimizer = None       # torch.optim.Optimizer
@@ -45,7 +45,10 @@ class Solver:
 
     # config the gradscaler
     newer_than_230 = version.parse(torch.__version__) > version.parse('2.3.0')
-    self.scaler = torch.GradScaler() if newer_than_230 else torch.cuda.amp.GradScaler()
+    if self.amp_mode == 'fp16':
+      self.scaler = torch.GradScaler() if newer_than_230 else torch.cuda.amp.GradScaler()
+    else:
+      self.scaler = None
 
   def get_model(self):
     r''' Return a model. '''
@@ -171,24 +174,35 @@ class Solver:
 
       # forward and backward
       self.optimizer.zero_grad(flags.zero_grad_to_none)
-      with torch.autocast('cuda', enabled=self.use_amp):
-        output = self.train_step(batch)
-        # 'train/loss' is a special key reserved for backward
-        loss = output['train/loss']
-
       clip_grad = self.FLAGS.SOLVER.clip_grad
-      if self.use_amp:
+
+      if self.amp_mode == 'none':
+        output = self.train_step(batch)
+        loss = output['train/loss']
+        loss.backward()
+        if clip_grad > 0:
+          torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
+        self.optimizer.step()
+      elif self.amp_mode == 'fp16':
+        with torch.autocast('cuda', dtype=torch.float16):
+          output = self.train_step(batch)
+          loss = output['train/loss']
         self.scaler.scale(loss).backward()
         if clip_grad > 0:
           self.scaler.unscale_(self.optimizer)
           torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
         self.scaler.step(self.optimizer)
         self.scaler.update()
+      elif self.amp_mode == 'bf16':
+        with torch.autocast('cuda', dtype=torch.bfloat16):
+          output = self.train_step(batch)
+          loss = output['train/loss']
+          loss.backward()
+          if clip_grad > 0:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
+          self.optimizer.step()
       else:
-        loss.backward()
-        if clip_grad > 0:
-          torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip_grad)
-        self.optimizer.step()
+        raise ValueError(f'Invalid amp mode: {self.amp_mode}')
 
       # track the averaged tensors
       avg_tracker.update(output)
@@ -310,7 +324,7 @@ class Solver:
         self.optimizer.load_state_dict(trained_dict['optimizer_dict'])
       if self.scheduler:
         self.scheduler.load_state_dict(trained_dict['scheduler_dict'])
-      if self.use_amp and 'scaler_dict' in trained_dict:
+      if self.amp_mode == 'fp16' and 'scaler_dict' in trained_dict:
         self.scaler.load_state_dict(trained_dict['scaler_dict'])
     else:
       model_dict = trained_dict
@@ -401,11 +415,23 @@ class Solver:
     with torch.profiler.profile(
             activities=activities, schedule=schedule,
             on_trace_ready=torch.profiler.tensorboard_trace_handler(logdir),
-            record_shapes=True, profile_memory=True, with_stack=True,
+            record_shapes=True, profile_memory=True, with_stack=False,
             with_modules=True) as prof:
       for _ in range(5):
-        output = self.train_step(batch)
-        output['train/loss'].backward()
+        if self.amp_mode == 'none':
+          output = self.train_step(batch)
+          loss = output['train/loss']
+          loss.backward()
+        elif self.amp_mode == 'fp16':
+          with torch.autocast('cuda', dtype=torch.float16):
+            output = self.train_step(batch)
+            loss = output['train/loss']
+          self.scaler.scale(loss).backward()
+        elif self.amp_mode == 'bf16':
+          with torch.autocast('cuda', dtype=torch.bfloat16):
+            output = self.train_step(batch)
+            loss = output['train/loss']
+            loss.backward()
         prof.step()
 
     print(prof.key_averages(group_by_input_shape=True, group_by_stack_n=10)
