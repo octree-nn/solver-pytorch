@@ -295,11 +295,12 @@ class Solver:
                   else self.model.state_dict())
     ckpt_name = os.path.join(self.ckpt_dir, '%05d' % epoch)
     torch.save(model_dict, ckpt_name + '.model.pth')
-    torch.save({'model_dict': model_dict, 'epoch': epoch,
+    ckpt_data = {'model_dict': model_dict, 'epoch': epoch,
                 'optimizer_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict(),
-                'scaler_dict': self.scaler.state_dict()},
-               ckpt_name + '.solver.tar')
+                'scheduler_dict': self.scheduler.state_dict()}
+    if self.scaler:
+      ckpt_data['scaler_dict'] = self.scaler.state_dict()
+    torch.save(ckpt_data, ckpt_name + '.solver.tar')
 
   def load_checkpoint(self):
     ckpt = self.FLAGS.SOLVER.ckpt
