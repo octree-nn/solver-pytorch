@@ -1,0 +1,8 @@
+torch
+numpy
+yacs
+tqdm
+packaging
+tensorboard
+sphinx>=3
+sphinx_rtd_theme
