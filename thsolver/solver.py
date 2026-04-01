@@ -25,8 +25,20 @@ from .lr_scheduler import get_lr_scheduler
 
 
 class Solver:
+  r''' A lightweight base class for PyTorch training and evaluation loops.
+
+  Subclasses implement the model, dataset, and step-specific logic, while this
+  class handles logging, checkpointing, distributed training, and scheduling.
+  '''
 
   def __init__(self, FLAGS, is_master=True):
+    r''' Initializes the solver runtime state.
+
+    Args:
+      FLAGS: The experiment config tree.
+      is_master (bool): If True, enables logging and checkpoint writing.
+    '''
+
     self.FLAGS = FLAGS
     self.is_master = is_master
     self.world_size = self.get_world_size(FLAGS)
@@ -51,32 +63,60 @@ class Solver:
       self.scaler = None
 
   def get_model(self):
-    r''' Return a model. '''
+    r''' Returns the model used by the current experiment. '''
     raise NotImplementedError
 
   def get_dataset(self, flags):
-    r''' Return a dataset and a collate function. '''
+    r''' Returns a dataset and its collate function.
+
+    Args:
+      flags: The dataset config node.
+    '''
     raise NotImplementedError
 
   def train_step(self, batch):
-    r''' Return a dict containing the training loss and other information.
-    The returned dict should contain the key 'train/loss', which is a scalar
-    and will be used to calculate the gradient and update the model.
+    r''' Returns the outputs of one training step.
+
+    The returned dict should contain the key ``train/loss``, which is the scalar
+    loss used for back propagation and optimizer updates.
+
+    Args:
+      batch (dict): One batch produced by the training dataloader.
     '''
     raise NotImplementedError
 
   def test_step(self, batch):
-    r''' Return a dict containing the testing loss and other information. '''
+    r''' Returns the outputs of one testing step.
+
+    Args:
+      batch (dict): One batch produced by the test dataloader.
+    '''
     raise NotImplementedError
 
   def eval_step(self, batch):
-    r''' Evaluate the model on the batch. '''
+    r''' Evaluates the model on a batch.
+
+    Args:
+      batch (dict): One batch produced by the evaluation dataloader.
+    '''
     raise NotImplementedError
 
   def result_callback(self, avg_tracker: AverageTracker, epoch):
+    r''' Runs custom logic after a test epoch finishes.
+
+    Args:
+      avg_tracker (AverageTracker): The epoch-level tracker.
+      epoch (int): The current epoch number.
+    '''
     pass  # additional operations based on the avg_tracker
 
   def config_dataloader(self, disable_train_data=False):
+    r''' Builds the train and test dataloaders when enabled.
+
+    Args:
+      disable_train_data (bool): If True, skips the training dataloader.
+    '''
+
     flags_train, flags_test = self.FLAGS.DATA.train, self.FLAGS.DATA.test
 
     if not disable_train_data and not flags_train.disable:
@@ -88,6 +128,15 @@ class Solver:
       self.test_iter = iter(self.test_loader)
 
   def get_dataloader(self, flags):
+    r''' Builds one dataloader from a dataset config node.
+
+    Args:
+      flags: The dataset config node.
+
+    Returns:
+      torch.utils.data.DataLoader: The configured dataloader.
+    '''
+
     dataset, collate_fn = self.get_dataset(flags)
 
     if self.world_size > 1:
@@ -101,6 +150,8 @@ class Solver:
     return data_loader
 
   def config_model(self):
+    r''' Builds the model, moves it to CUDA, and wraps DDP if needed. '''
+
     flags = self.FLAGS.MODEL
     model = self.get_model(flags)
     model.cuda(device=self.device)
@@ -120,6 +171,12 @@ class Solver:
     self.model = model
 
   def config_optimizer(self):
+    r''' Builds the optimizer for the current model.
+
+    The base learning rate is scaled by ``world_size`` to match the effective
+    global batch size in distributed training.
+    '''
+
     # The base learning rate `base_lr` scales with regard to the world_size
     flags = self.FLAGS.SOLVER
     base_lr = flags.lr * self.world_size
@@ -139,10 +196,18 @@ class Solver:
       raise ValueError
 
   def config_lr_scheduler(self):
+    r''' Builds the learning-rate scheduler for the current optimizer. '''
+
     # This function must be called after :func:`configure_optimizer`
     self.scheduler = get_lr_scheduler(self.optimizer, self.FLAGS.SOLVER)
 
   def configure_log(self, set_writer=True):
+    r''' Configures the log directory, checkpoint directory, and writers.
+
+    Args:
+      set_writer (bool): If True, creates the TensorBoard writer.
+    '''
+
     self.logdir = self.FLAGS.SOLVER.logdir
     self.ckpt_dir = os.path.join(self.logdir, 'checkpoints')
     self.log_file = os.path.join(self.logdir, 'log.csv')
@@ -155,6 +220,12 @@ class Solver:
       os.makedirs(self.ckpt_dir, exist_ok=True)
 
   def train_epoch(self, epoch):
+    r''' Runs one full training epoch.
+
+    Args:
+      epoch (int): The current epoch number.
+    '''
+
     self.model.train()
     if self.world_size > 1:
       self.train_loader.sampler.set_epoch(epoch)
@@ -221,6 +292,12 @@ class Solver:
       avg_tracker.log(epoch, self.summary_writer, print_time=True)
 
   def test_epoch(self, epoch):
+    r''' Runs one full test epoch.
+
+    Args:
+      epoch (int): The current epoch number.
+    '''
+
     self.model.eval()
     avg_tracker = AverageTracker()
     rng = range(len(self.test_loader))
@@ -247,6 +324,12 @@ class Solver:
       avg_tracker.log(epoch, self.summary_writer, self.log_file, msg_tag='=>')
 
   def eval_epoch(self, epoch):
+    r''' Runs one evaluation epoch in ``evaluate`` mode.
+
+    Args:
+      epoch (int): The current epoch number.
+    '''
+
     self.model.eval()
     eval_step = min(self.FLAGS.SOLVER.eval_step, len(self.test_loader))
     if eval_step < 1:
@@ -259,6 +342,13 @@ class Solver:
         self.eval_step(batch)
 
   def save_best_checkpoint(self, tracker: AverageTracker, epoch: int):
+    r''' Saves the best-performing model according to ``SOLVER.best_val``.
+
+    Args:
+      tracker (AverageTracker): The tracker holding averaged test metrics.
+      epoch (int): The current epoch number.
+    '''
+
     best_val = self.FLAGS.SOLVER.best_val
     if not (best_val and self.FLAGS.SOLVER.run == 'train'):
       return  # return if best_val is empty or it is not in the train mode
@@ -281,6 +371,12 @@ class Solver:
         tqdm.write('=> Best model at ' + msg)
 
   def save_checkpoint(self, epoch):
+    r''' Saves a training checkpoint for the given epoch.
+
+    Args:
+      epoch (int): The epoch number used in the checkpoint filename.
+    '''
+
     if not self.is_master: return
 
     # clean up
@@ -296,13 +392,17 @@ class Solver:
     ckpt_name = os.path.join(self.ckpt_dir, '%05d' % epoch)
     torch.save(model_dict, ckpt_name + '.model.pth')
     ckpt_data = {'model_dict': model_dict, 'epoch': epoch,
-                'optimizer_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict()}
+                 'optimizer_dict': self.optimizer.state_dict(),
+                 'scheduler_dict': self.scheduler.state_dict()}
     if self.scaler:
       ckpt_data['scaler_dict'] = self.scaler.state_dict()
     torch.save(ckpt_data, ckpt_name + '.solver.tar')
 
   def load_checkpoint(self):
+    r''' Loads the requested checkpoint or the latest checkpoint defined
+    in ``SOLVER.ckpt``.
+    '''
+
     ckpt = self.FLAGS.SOLVER.ckpt
     if not ckpt:
       # If ckpt is empty, then get the latest checkpoint from ckpt_dir
@@ -338,6 +438,8 @@ class Solver:
       tqdm.write('The start_epoch is %d' % self.start_epoch)
 
   def manual_seed(self):
+    r''' Sets random seeds when ``SOLVER.rand_seed`` is positive. '''
+
     rand_seed = self.FLAGS.SOLVER.rand_seed
     if rand_seed > 0:
       random.seed(rand_seed)
@@ -349,6 +451,8 @@ class Solver:
       torch.backends.cudnn.deterministic = True
 
   def train(self):
+    r''' Runs the end-to-end training workflow. '''
+
     self.manual_seed()
     self.config_model()
     self.config_dataloader()
@@ -379,6 +483,8 @@ class Solver:
       torch.distributed.barrier()
 
   def test(self):
+    r''' Loads a checkpoint and runs the test loop once. '''
+
     self.manual_seed()
     self.config_model()
     self.configure_log(set_writer=False)
@@ -387,6 +493,8 @@ class Solver:
     self.test_epoch(epoch=0)
 
   def evaluate(self):
+    r''' Loads a checkpoint and runs the evaluation loop. '''
+
     self.manual_seed()
     self.config_model()
     self.configure_log(set_writer=False)
@@ -396,7 +504,10 @@ class Solver:
       self.eval_epoch(epoch)
 
   def profile(self):
-    r''' Set `DATA.train.num_workers 0` when using this function. '''
+    r''' Profiles a few training iterations with the PyTorch profiler.
+
+    Set ``DATA.train.num_workers 0`` when using this function.
+    '''
 
     self.config_model()
     self.config_dataloader()
@@ -441,10 +552,18 @@ class Solver:
               .table(sort_by="cuda_memory_usage", row_limit=10))
 
   def run(self):
+    r''' Dispatches to the run mode configured in ``SOLVER.run``. '''
+
     eval('self.%s()' % self.FLAGS.SOLVER.run)
 
   @staticmethod
   def get_world_size(FLAGS):
+    r''' Returns the distributed world size implied by the launch mode.
+
+    Args:
+      FLAGS: The experiment config tree.
+    '''
+
     world_size = 1
     if FLAGS.SOLVER.ddp_mode == "spawn":
       world_size = len(FLAGS.SOLVER.gpu)
@@ -456,10 +575,19 @@ class Solver:
 
   @classmethod
   def update_configs(cls):
+    r''' Updates class-specific configs before parsing command-line arguments. '''
+
     pass
 
   @classmethod
   def worker(cls, rank, FLAGS):
+    r''' Runs one solver worker process.
+
+    Args:
+      rank (int): The process rank in the current launch.
+      FLAGS: The experiment config tree.
+    '''
+
     world_size = cls.get_world_size(FLAGS)
     newer_than_280 = version.parse(torch.__version__) >= version.parse('2.8.0')
 
@@ -505,6 +633,8 @@ class Solver:
 
   @classmethod
   def main(cls):
+    r''' Parses configs and launches the solver with the configured DDP mode. '''
+
     cls.update_configs()
     FLAGS = parse_args()
 

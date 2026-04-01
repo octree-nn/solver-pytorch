@@ -120,6 +120,18 @@ FLAGS = _C
 
 
 def _load_from_file(filename):
+  r''' Loads a config file together with all config files listed in ``BASE``.
+
+  The config files are merged from base to leaf so that the current experiment
+  file overrides values defined in its dependencies.
+
+  Args:
+    filename (str): The path to the config file.
+
+  Returns:
+    list: A list of :class:`yacs.config.CfgNode` objects in merge order.
+  '''
+
   cfgs = []
   bases = [filename]
   while len(bases) > 0:
@@ -136,6 +148,13 @@ def _load_from_file(filename):
 
 
 def _update_config(FLAGS, args):
+  r''' Updates :attr:`FLAGS` from the parsed command-line arguments.
+
+  Args:
+    FLAGS (CfgNode): The global config tree.
+    args (argparse.Namespace): The parsed command-line arguments.
+  '''
+
   FLAGS.defrost()
   if args.config:
     # FLAGS.merge_from_file(args.config)
@@ -156,6 +175,13 @@ def _update_config(FLAGS, args):
 
 
 def _backup_config(FLAGS, args):
+  r''' Backs up the resolved config into the logging directory.
+
+  Args:
+    FLAGS (CfgNode): The final merged config tree.
+    args (argparse.Namespace): The parsed command-line arguments.
+  '''
+
   logdir = FLAGS.SOLVER.logdir
   os.makedirs(logdir, exist_ok=True)
 
@@ -170,14 +196,32 @@ def _backup_config(FLAGS, args):
 
 
 def _set_env_var(FLAGS):
+  r''' Exports the selected GPU ids through ``CUDA_VISIBLE_DEVICES``.
+
+  Args:
+    FLAGS (CfgNode): The config tree containing ``SOLVER.gpu``.
+  '''
+
   gpus = ','.join([str(a) for a in FLAGS.SOLVER.gpu])
   os.environ['CUDA_VISIBLE_DEVICES'] = gpus
 
 
 def get_config():
+  r''' Returns the global default config tree. '''
+
   return FLAGS
 
+
 def parse_args(backup=True):
+  r''' Parses command-line arguments and returns the merged config.
+
+  Args:
+    backup (bool): If True, saves the experiment config into the log directory.
+
+  Returns:
+    CfgNode: The final merged and frozen config tree.
+  '''
+
   parser = argparse.ArgumentParser(description='The configs')
   parser.add_argument('--config', type=str,
                       help='experiment configure file name')

@@ -15,14 +15,19 @@ from typing import Dict, Optional
 
 
 class AverageTracker:
+  r''' Tracks and logs averaged scalar tensors across iterations and epochs. '''
 
   def __init__(self):
+    r''' Initializes the tracker state. '''
+
     self.value = dict()
     self.num = dict()
     self.max_len = 76
     self.start_time = self.get_time()
 
   def get_time(self):
+    r''' Returns the current synchronized wall-clock time. '''
+
     torch.cuda.synchronize()
     return time.time()
 
@@ -36,13 +41,18 @@ class AverageTracker:
       self.num[key] = self.num.get(key, 0) + 1
 
   def record_time(self, num_iters: int = 1):
-    r''' roughly record the time relative to the construction of the tracker.
+    r''' Roughly records the elapsed time per iteration.
+
+    Args:
+      num_iters (int): The number of iterations represented by the update.
     '''
 
     self.value['time/iter'] = self.get_time() - self.start_time
     self.num['time/iter'] = self.num.get('time/iter', 0) + num_iters
 
   def average(self):
+    r''' Returns the averaged values accumulated in the tracker. '''
+
     return {key: float(val) / self.num[key] for key, val in self.value.items()}
 
   @torch.no_grad()
@@ -63,7 +73,16 @@ class AverageTracker:
   def log(self, epoch: int, summary_writer: Optional[SummaryWriter] = None,
           log_file: Optional[str] = None, msg_tag: str = '->', notes: str = '',
           print_time: bool = True, print_memory: bool = False):
-    r'''Log the average value to the console, tensorboard and log file.
+    r''' Logs the average value to the console, TensorBoard, and a log file.
+
+    Args:
+      epoch (int): The current epoch index.
+      summary_writer (SummaryWriter or None): The TensorBoard writer.
+      log_file (str or None): The CSV-like log file path.
+      msg_tag (str): The prefix printed before the log line.
+      notes (str): Extra notes appended to the log message.
+      print_time (bool): If True, prints the timestamp and elapsed time.
+      print_memory (bool): If True, prints the reserved CUDA memory.
     '''
 
     avg = self.average()
