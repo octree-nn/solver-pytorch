@@ -1,5 +1,9 @@
 # The Solver for PyTorch
 
+**[Documentation](https://solver-pytorch.readthedocs.io)**
+
+
+[![Documentation Status](https://readthedocs.org/projects/solver-pytorch/badge/?version=latest)](https://solver-pytorch.readthedocs.io/en/latest/?badge=latest)
 [![PyPI Downloads](https://static.pepy.tech/badge/thsolver)](https://pepy.tech/project/thsolver)
 [![PyPI](https://img.shields.io/pypi/v/thsolver)](https://pypi.org/project/thsolver/)
 
