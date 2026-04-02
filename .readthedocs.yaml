@@ -1,0 +1,26 @@
+# --------------------------------------------------------
+# Octree-based Sparse Convolutional Neural Networks
+# Copyright (c) 2022 Peng-Shuai Wang <wangps@hotmail.com>
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Peng-Shuai Wang
+# --------------------------------------------------------
+
+version: 2
+
+sphinx:
+  # Path to your Sphinx configuration file.
+  configuration: docs/source/conf.py
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.8"
+
+python:
+  install:
+    - requirements: docs/requirements.txt
+    # - method: pip
+    - method: setuptools
+      path: .
+
+formats: []
