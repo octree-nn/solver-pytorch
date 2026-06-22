@@ -83,11 +83,10 @@ _C.DATA.train.flip          = (0.0, 0.0, 0.0)
 # For data loading
 _C.DATA.train.location      = ''          # The data location
 _C.DATA.train.filelist      = ''          # The data filelist
-_C.DATA.train.batch_size    = 32          # Training data batch size
+_C.DATA.train.batch_size    = 32          # Batch size per GPU (effective batch size = batch_size * # GPUs))
 _C.DATA.train.take          = -1          # Number of samples used for training
 _C.DATA.train.num_workers   = 4           # Number of workers to load the data
 _C.DATA.train.shuffle       = False       # Shuffle the input data
-# _C.DATA.train.in_memory     = False       # Load the training data into memory
 
 
 _C.DATA.test = _C.DATA.train.clone()
@@ -195,15 +194,13 @@ def _backup_config(FLAGS, args):
     fid.write(FLAGS.dump())
 
 
-def _set_env_var(FLAGS):
-  r''' Exports the selected GPU ids through ``CUDA_VISIBLE_DEVICES``.
-
-  Args:
-    FLAGS (CfgNode): The config tree containing ``SOLVER.gpu``.
-  '''
-
-  gpus = ','.join([str(a) for a in FLAGS.SOLVER.gpu])
-  os.environ['CUDA_VISIBLE_DEVICES'] = gpus
+# def _set_env_var(FLAGS):
+#   r''' Exports the selected GPU ids through ``CUDA_VISIBLE_DEVICES``.
+#   Args:
+#     FLAGS (CfgNode): The config tree containing ``SOLVER.gpu``.
+#   '''
+#   gpus = ','.join([str(a) for a in FLAGS.SOLVER.gpu])
+#   os.environ['CUDA_VISIBLE_DEVICES'] = gpus
 
 
 def get_config():
